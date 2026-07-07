@@ -1,0 +1,1803 @@
+# Chapter 10 — Level 3: CLI Agent
+
+## 1. Learning Objectives
+
+ဒီအခန်းပြီးသွားရင် သင်က အောက်ပါအရာတွေကို နားလည်ရပါမယ်။
+
+```text
+[ ] Level 3: CLI Agent ဆိုတာဘာလဲ ရှင်းပြနိုင်မယ်
+[ ] Editor Agent နဲ့ CLI Agent ကွာခြားချက်သိမယ်
+[ ] CLI Agent က project folder ထဲမှာ ဘယ်လိုအလုပ်လုပ်လဲ နားလည်မယ်
+[ ] Terminal, file system, Git, npm scripts တွေနဲ့ CLI Agent ဘယ်လိုချိတ်လဲ သိမယ်
+[ ] CLI Agent ကို project root ထဲမှာ စတင်သုံးရမယ်ဆိုတာနားလည်မယ်
+[ ] CLI Agent ကို read-only analysis, small fix, test/build verification အတွက်ခိုင်းနိုင်မယ်
+[ ] CLI Agent ကို မခိုင်းသင့်တဲ့ risky tasks တွေကိုခွဲနိုင်မယ်
+[ ] Plan-first workflow ကို CLI Agent နဲ့သုံးနိုင်မယ်
+[ ] CLI Agent prompt ထဲမှာ scope, allowed files, do-not-edit, verification ထည့်နိုင်မယ်
+[ ] CLI Agent output ကို Git diff, test/build result, summary နဲ့စစ်နိုင်မယ်
+[ ] Level 3 က Level 4 Coding Agent မဟုတ်သေးကြောင်းနားလည်မယ်
+```
+
+ဒီအခန်းမှာ Agentic Coding က တကယ်စပြီး အားကောင်းလာပါတယ်။ Level 0 မှာ ChatGPT code example ရတယ်။ Level 1 မှာ AI autocomplete က line/block ဆက်ရေးပေးတယ်။ Level 2 မှာ Editor Agent က selected file/code ကိုပြင်ပေးတယ်။ Level 3 မှာတော့ Agent က **terminal ထဲကနေ project folder ကိုဖတ်၊ file တွေပြင်၊ command တွေ run၊ output တွေဖတ်ပြီး အလုပ်လုပ်နိုင်တဲ့ CLI Agent** ဖြစ်လာတယ်။
+
+Claude Code official docs မှာ Claude Code ကို codebase ဖတ်နိုင်၊ file edit လုပ်နိုင်၊ commands run နိုင်ပြီး terminal, IDE, desktop app, browser ထဲမှာသုံးနိုင်တဲ့ agentic coding tool အဖြစ်ဖော်ပြထားပါတယ်။ OpenAI Codex CLI official docs မှာလည်း Codex CLI ကို local terminal ထဲမှာ run နိုင်ပြီး selected directory ထဲက code ကို read, change, run လုပ်နိုင်တဲ့ coding agent အဖြစ်ဖော်ပြထားပါတယ်။ ([Claude][1])
+
+---
+
+## 2. Beginner Explanation
+
+CLI ဆိုတာ **Command Line Interface** ပါ။ Chapter 2 မှာ terminal ကိုသင်ခဲ့တယ်။ CLI Agent ဆိုတာ အဲဒီ terminal ထဲမှာ run နေတဲ့ AI coding assistant ပါ။
+
+အရင် Level 2 Editor Agent မှာ—
+
+```text
+Editor ထဲက current file / selected code ကိုပြင်တယ်
+User က diff accept/reject လုပ်တယ်
+```
+
+Level 3 CLI Agent မှာ—
+
+```text
+Terminal ထဲမှာ project folder ကိုဖွင့်ထားတယ်
+Agent က project files တွေကိုဖတ်နိုင်တယ်
+Agent က command တွေ run နိုင်တယ်
+Agent က test/build output ကိုဖတ်နိုင်တယ်
+Agent က Git status/diff ကိုကြည့်နိုင်တယ်
+```
+
+ဥပမာ သင်က terminal မှာ project folder ထဲဝင်တယ်။
+
+```bash
+cd ~/Desktop/agentic-zero-to-hero
+```
+
+ပြီးရင် CLI Agent ကို run တယ်။
+
+```bash
+claude
+```
+
+သို့မဟုတ်—
+
+```bash
+codex
+```
+
+အဲဒီနောက် Agent ကို ဒီလိုမေးနိုင်တယ်။
+
+```text
+ဒီ project structure ကိုဖတ်ပြီး beginner နားလည်အောင်ရှင်းပြပါ။
+Code မပြင်ပါနဲ့။
+```
+
+CLI Agent က project folder ထဲက files တွေကိုဖတ်ပြီး structure ကိုရှင်းပြနိုင်တယ်။ နောက်ပိုင်းမှာ—
+
+```text
+npm run build run ပါ။
+Error ရှိရင် root cause ရှာပါ။
+Code မပြင်ခင် fix plan ပေးပါ။
+```
+
+လို command verification workflow တွေလုပ်နိုင်လာမယ်။
+
+---
+
+# 3. Level 3 CLI Agent ဆိုတာဘာလဲ
+
+Level 3: CLI Agent ဆိုတာ—
+
+```text
+Terminal ထဲမှာ run ပြီး project folder ထဲက files, commands, Git, tests, builds တွေနဲ့အလုပ်လုပ်နိုင်တဲ့ AI coding assistant
+```
+
+ပါ။
+
+Level 3 မှာ CLI Agent က—
+
+```text
+[✓] project file tree ဖတ်နိုင်တယ်
+[✓] README / package.json / SPEC.md / CLAUDE.md / AGENTS.md ဖတ်နိုင်တယ်
+[✓] file content ရှင်းပြနိုင်တယ်
+[✓] selected task အတွက် relevant files ရှာနိုင်တယ်
+[✓] small code edit လုပ်နိုင်တယ်
+[✓] terminal commands run နိုင်တယ်
+[✓] npm scripts run နိုင်တယ်
+[✓] test/build output ဖတ်ပြီး diagnosis လုပ်နိုင်တယ်
+[✓] git status / git diff summary ပေးနိုင်တယ်
+```
+
+ဒါပေမယ့် Level 3 ကို “အကုန်သိပြီး အကုန်လုပ်နိုင်တဲ့ senior engineer” လို့မယူဆပါနဲ့။ Level 3 မှာ လူက workflow ကိုထိန်းရမယ်။
+
+Level 3 မှာ user က—
+
+```text
+scope သတ်မှတ်မယ်
+plan approve လုပ်မယ်
+command permission ပေးမယ်
+diff review လုပ်မယ်
+test/build result စစ်မယ်
+commit approval ပေးမယ်
+```
+
+ဖြစ်ပါတယ်။
+
+---
+
+# 4. Level 2 vs Level 3
+
+| အချက်            | Level 2: Editor Agent           | Level 3: CLI Agent                            |
+| ---------------- | ------------------------------- | --------------------------------------------- |
+| အလုပ်လုပ်တဲ့နေရာ | Code editor                     | Terminal / project folder                     |
+| Context          | Selected file / working set     | Repo folder, file tree, commands              |
+| File edit        | Editor diff အခြေခံ              | File system edit အခြေခံ                       |
+| Command run      | များသောအားဖြင့် user ကိုယ်တိုင် | Agent run/propose လုပ်နိုင်                   |
+| Build/test       | User manually                   | Agent run + output analyze လုပ်နိုင်          |
+| Git workflow     | User manually diff review       | Agent git status/diff summary ပေးနိုင်        |
+| Best use         | small file edit                 | repo understanding, small task + verification |
+| Main risk        | wrong file edit                 | risky command/file edit/scope creep           |
+| User role        | diff reviewer                   | project operator + permission gate            |
+
+Level 2 မှာ Agent က editor ထဲက file ကိုပြင်ပေးတာအဓိကပါ။ Level 3 မှာ Agent က terminal ထဲကနေ project folder တစ်ခုလုံးနဲ့ဆက်သွယ်နိုင်လာတာကြောင့် power ပိုကြီးသလို risk လည်းပိုကြီးလာတယ်။
+
+---
+
+# 5. CLI Agent ရဲ့ အလုပ်လုပ်ပုံ
+
+CLI Agent ကို project folder ထဲမှာ run တာက အရေးကြီးပါတယ်။
+
+မမှန်တဲ့နေရာ—
+
+```bash
+cd ~/Desktop
+claude
+```
+
+ဒီလို run လိုက်ရင် Agent က Desktop folder ကို context အဖြစ်ယူနိုင်တယ်။ Project root မဟုတ်ရင် confused ဖြစ်နိုင်တယ်။
+
+မှန်တဲ့နေရာ—
+
+```bash
+cd ~/Desktop/agentic-zero-to-hero
+claude
+```
+
+သို့မဟုတ်—
+
+```bash
+cd ~/Desktop/agentic-zero-to-hero
+codex
+```
+
+CLI Agent workflow—
+
+```text
+1. User က project root ထဲဝင်
+2. CLI Agent ကို run
+3. Agent က project context ကိုဖတ်
+4. User က task prompt ပေး
+5. Agent က plan / questions / tool calls ပေး
+6. User က permission approve/reject
+7. Agent က file edit / command run
+8. Agent က result summary ပေး
+9. User က git diff/test/build review
+```
+
+Codex CLI docs မှာ Codex က full-screen terminal UI ထဲမှာ repository ကို read, edit, run commands လုပ်နိုင်ပြီး user က real time မှာ actions တွေကို review လုပ်ရင်း conversational workflow အနေနဲ့ iterate လုပ်နိုင်တယ်လို့ဖော်ပြထားပါတယ်။ ([OpenAI Developers][2])
+
+---
+
+# 6. CLI Agent နဲ့ Permission
+
+CLI Agent က file edit, shell command, network request လုပ်နိုင်တဲ့အတွက် permission control အရေးကြီးပါတယ်။
+
+Claude Code permission docs မှာ Claude က file edit, shell command run, network request လုပ်ချင်တဲ့အခါ pause လုပ်ပြီး user approval တောင်းနိုင်ကြောင်း၊ permission mode က အဲဒီ approval pause ဘယ်လောက်ဖြစ်မလဲ ထိန်းပေးကြောင်းဖော်ပြထားပါတယ်။ Sensitive work အတွက် oversight ပိုများတဲ့ mode ကိုရွေးသင့်ပြီး trusted/clear tasks အတွက် interruption နည်းတဲ့ mode သုံးနိုင်တယ်လို့ docs မှာရှင်းပြထားပါတယ်။ ([Claude][3])
+
+Beginner အတွက် rule—
+
+```text
+Manual / ask-first style နဲ့စပါ။
+Agent ကို risky command auto-run မလုပ်ခိုင်းပါနဲ့။
+```
+
+Risky actions—
+
+```text
+- package install
+- file delete
+- git reset / git clean
+- database migration
+- deployment
+- .env edit/read
+- network download script
+- curl | bash
+```
+
+Prompt—
+
+```text
+ကျွန်တော် beginner ပါ။
+Command run မလုပ်ခင် command က ဘာလုပ်တာလဲရှင်းပြပါ။
+File edit, package install, Git reset, deployment command, .env access လုပ်မယ်ဆိုရင် approval အရင်တောင်းပါ။
+```
+
+---
+
+# 7. CLI Agent ကို ဘယ်အချိန်သုံးသင့်လဲ
+
+## 7.1 Project structure နားလည်ချင်တဲ့အခါ
+
+Prompt—
+
+```text
+ဒီ project ကိုမပြင်ပါနဲ့။
+File tree ကိုဖတ်ပြီး beginner နားလည်အောင်ရှင်းပြပါ။
+
+ပြန်ပေးရန်:
+- root folder ဘာလဲ
+- main folders တွေဘာအတွက်လဲ
+- important files ၅ ခု
+- available npm scripts
+- ပထမဆုံးဖတ်သင့်တဲ့ files
+```
+
+## 7.2 package.json scripts ရှင်းချင်တဲ့အခါ
+
+Prompt—
+
+```text
+package.json ကိုဖတ်ပြီး scripts တွေကိုရှင်းပြပါ။
+Code မပြင်ပါနဲ့။
+
+ပြန်ပေးရန်:
+- npm run dev ဘာလုပ်တာလဲ
+- npm run build ရှိလား
+- npm test ရှိလား
+- missing scripts ရှိလား
+```
+
+## 7.3 Build/test run စစ်ချင်တဲ့အခါ
+
+Prompt—
+
+```text
+npm run build run ပါ။
+Error ရှိရင် code မပြင်သေးပါနဲ့။
+ပထမဆုံး error summary, possible root causes, fix plan ပေးပါ။
+```
+
+## 7.4 Small bug fix လုပ်ချင်တဲ့အခါ
+
+Prompt—
+
+```text
+Bug:
+Registration form မှာ spaces-only name ကို valid လို့ယူနေပါတယ်။
+
+လုပ်ရန်:
+1. Relevant files ရှာပါ
+2. Code မပြင်ခင် plan ပေးပါ
+3. Minimal fix လုပ်ပါ
+4. Manual test cases ပေးပါ
+5. git diff summary ပေးပါ
+```
+
+## 7.5 Git diff review လုပ်ချင်တဲ့အခါ
+
+Prompt—
+
+```text
+git status နဲ့ git diff ကြည့်ပြီး changes တွေကို review လုပ်ပါ။
+Code မပြင်ပါနဲ့။
+
+စစ်ရန်:
+- scope ထဲပါလား
+- secret ပါလား
+- package.json မလိုဘဲပြင်ထားလား
+- risk ရှိလား
+- commit message အကြံပြုပါ
+```
+
+Claude Code common workflows docs မှာ codebase exploration, debugging, refactoring, testing, PRs, documentation, plan before editing စတဲ့ everyday workflows တွေကို prompt recipes အနေနဲ့ဖော်ပြထားပါတယ်။ ([Claude][4])
+
+---
+
+# 8. CLI Agent ကို ဘယ်အချိန်သတိထားသင့်လဲ
+
+## 8.1 Project root မမှန်တဲ့အခါ
+
+CLI Agent ကို folder မှားထဲမှာ run လိုက်ရင် wrong context ဖြစ်နိုင်တယ်။
+
+စစ်ရန်—
+
+```bash
+pwd
+ls
+```
+
+Prompt—
+
+```text
+Task မစခင် pwd နဲ့ ls run ပြီး project root မှန်ကြောင်းစစ်ပါ။
+```
+
+## 8.2 Working tree မ clean ဖြစ်တဲ့အခါ
+
+Agent ကို code မပြင်ခိုင်းခင် Git status စစ်ရမယ်။
+
+```bash
+git status
+```
+
+Prompt—
+
+```text
+git status စစ်ပါ။
+Working tree clean မဟုတ်ရင် code မပြင်ပါနဲ့။
+Uncommitted changes summary ပေးပါ။
+```
+
+## 8.3 Agent က package install လုပ်ချင်တဲ့အခါ
+
+Prompt—
+
+```text
+Package install မလုပ်သေးပါနဲ့။
+Package name, reason, dependency type, alternatives, security risk, files changed ကိုအရင်ပြပါ။
+```
+
+## 8.4 Agent က destructive command run ချင်တဲ့အခါ
+
+Destructive commands—
+
+```text
+rm -rf
+git reset --hard
+git clean -fd
+drop database
+delete from
+deploy production
+```
+
+Prompt—
+
+```text
+ဒီ command က destructive ဖြစ်နိုင်လားရှင်းပြပါ။
+ဘာ data ဆုံးရှုံးနိုင်လဲ?
+Dry-run ရှိလား?
+Rollback plan ရှိလား?
+Approval မရသေးဘဲ run မလုပ်ပါနဲ့။
+```
+
+## 8.5 Secret files ပါလာနိုင်တဲ့အခါ
+
+```text
+.env
+.env.local
+private key
+token file
+database URL
+```
+
+Prompt—
+
+```text
+.env files မဖတ်ပါနဲ့။
+Secret value မဖော်ပြပါနဲ့။
+.env.example ကိုသာကြည့်ပါ။
+```
+
+---
+
+# 9. CLI Agent Prompt Anatomy
+
+CLI Agent prompt က Editor Agent prompt ထက် ပိုစနစ်ကျဖို့လိုတယ်။ ဘာကြောင့်လဲဆိုရင် CLI Agent က file edit + command run လုပ်နိုင်တာကြောင့်ပါ။
+
+ကောင်းတဲ့ CLI Agent prompt မှာ ပါသင့်တဲ့အပိုင်းတွေ—
+
+```text
+1. Mode
+2. Goal
+3. Current safety state
+4. Scope
+5. Allowed files/folders
+6. Do not touch
+7. Steps
+8. Verification
+9. Reporting format
+10. Approval gates
+```
+
+Example—
+
+```text
+Mode:
+Plan first. Code မပြင်သေးပါနဲ့။
+
+Goal:
+Registration form မှာ spaces-only name ကို invalid အဖြစ်စစ်ချင်ပါတယ်။
+
+Safety:
+Task မစခင် git status စစ်ပါ။
+Working tree clean မဟုတ်ရင် code မပြင်ပါနဲ့။
+
+Scope:
+Frontend validation only.
+
+Allowed:
+- playground/chapter-9-editor-agent/app.js
+
+Do not touch:
+- package.json
+- package-lock.json
+- .env
+- services/api/**
+- node_modules/**
+
+Steps:
+1. Relevant code ကိုဖတ်ပါ
+2. Root cause ရှင်းပါ
+3. Minimal fix plan ပေးပါ
+4. Approval ရမှ edit လုပ်ပါ
+5. Manual test cases ပေးပါ
+6. git diff summary ပေးပါ
+
+Verification:
+Browser manual tests:
+- empty name
+- spaces-only name
+- empty phone
+- valid form
+```
+
+---
+
+# 10. Plan First in CLI Agent
+
+Level 3 မှာ plan-first workflow အရေးကြီးပါတယ်။
+
+Claude Code best-practices docs မှာ complex tasks အတွက် explore → plan → implement → commit ဆိုတဲ့ workflow ကိုအကြံပြုထားပြီး Plan Mode ကိုသုံးကာ Claude ကို files ဖတ်ပြီး plan တင်စေ၊ plan ကို review/refine လုပ်ပြီးမှ implementation လုပ်စေခြင်းက wrong problem ကို solve လုပ်မိတာကိုလျှော့စေတယ်လို့ရှင်းပြထားပါတယ်။ ([Claude][5])
+
+Beginner rule—
+
+```text
+Small typo fix → direct edit OK
+Unfamiliar code / multiple files / unclear task → plan first
+```
+
+Plan-first prompt—
+
+```text
+Code မပြင်သေးပါနဲ့။
+Plan mode အနေနဲ့လုပ်ပါ။
+
+Task:
+Event list page ကိုနားလည်ချင်ပါတယ်။
+
+လုပ်ရန်:
+- relevant files ရှာပါ
+- architecture summary ပေးပါ
+- ဘယ် file တွေဖတ်သင့်လဲပြောပါ
+- ဘယ် command run သင့်လဲပြောပါ
+- code ပြင်ရန်မလိုပါ
+```
+
+Plan review checklist—
+
+```text
+[ ] Task scope မှန်လား
+[ ] Allowed files မှန်လား
+[ ] Do-not-touch rules ပါလား
+[ ] Verification step ပါလား
+[ ] Risk/rollback plan ပါလား
+[ ] Package install မပါဘူးလား
+```
+
+---
+
+# 11. CLI Agent နဲ့ AGENTS.md / CLAUDE.md
+
+CLI Agent ကို project ထဲမှာ consistent ဖြစ်အောင် project memory files သုံးမယ်။
+
+```text
+CLAUDE.md → Claude Code အတွက် project memory
+AGENTS.md → Codex / generic coding agents အတွက် project instructions
+```
+
+Codex official docs မှာ Codex က task မစခင် `AGENTS.md` files တွေကိုဖတ်ပြီး global guidance နဲ့ project-specific overrides တွေကို layer လုပ်နိုင်ကြောင်းဖော်ပြထားပါတယ်။ AGENTS.md open format site မှာလည်း `AGENTS.md` ကို agents အတွက် README လို project setup commands, tests, conventions တွေထည့်တဲ့ predictable place အဖြစ်ရှင်းပြထားပါတယ်။ ([OpenAI Developers][6])
+
+Level 3 အတွက် `AGENTS.md` starter—
+
+```md
+# AGENTS.md
+
+## Project
+Agentic Coding Zero to Hero practice repository.
+
+## Safety
+- Do not read or edit .env files.
+- Do not edit node_modules or dist.
+- Ask before installing packages.
+- Ask before running destructive Git commands.
+
+## Commands
+- Check status: git status
+- Review changes: git diff
+- Run lab manually in browser for static HTML/CSS/JS examples.
+
+## Done
+A task is done only when:
+- scope is respected
+- changed files are summarized
+- verification steps are provided
+- git diff is reviewed
+```
+
+Level 3 CLI Agent ကို run မလုပ်ခင် project root ထဲမှာ ဒီ files တွေရှိရင် Agent context ပိုကောင်းလာမယ်။
+
+```text
+README.md
+COURSE_DECISIONS.md
+CLAUDE.md
+AGENTS.md
+.gitignore
+package.json
+```
+
+---
+
+# 12. CLI Agent Session စတင်နည်း
+
+Tool-specific install/setup က Part 3 မှာပိုအသေးစိတ်သင်မယ်။ ဒီအခန်းမှာ concept lab အနေနဲ့ session စတင်တဲ့ mental model ကိုသင်မယ်။
+
+## 12.1 Project root ထဲဝင်ပါ
+
+```bash
+cd ~/Desktop/agentic-zero-to-hero
+pwd
+ls
+```
+
+## 12.2 Git state စစ်ပါ
+
+```bash
+git status
+```
+
+Working tree clean မဟုတ်ရင် commit သို့မဟုတ် review လုပ်ပါ။
+
+## 12.3 CLI Agent run ပါ
+
+Tool အလိုက်—
+
+```bash
+claude
+```
+
+သို့မဟုတ်—
+
+```bash
+codex
+```
+
+## 12.4 First prompt
+
+```text
+ဒီ project ကိုမပြင်ပါနဲ့။
+ပထမဆုံး project structure ကိုဖတ်ပြီး beginner-friendly overview ပေးပါ။
+
+စစ်ရန်:
+- root folder
+- important files
+- available labs
+- Git state
+- safety files
+- ပထမဆုံးဖတ်သင့်တဲ့ files
+```
+
+---
+
+# 13. Level 3 Use Case — Read-only Project Onboarding
+
+ဒီ use case က beginner အတွက် အကောင်းဆုံးစတင်နည်းပါ။ Code မပြင်ဘူး။ Agent ကို project ဖတ်ပြီးရှင်းခိုင်းမယ်။
+
+Prompt—
+
+```text
+Read-only mode အနေနဲ့လုပ်ပါ။
+Code မပြင်ပါနဲ့။ Command run မလုပ်ခင်ရှင်းပြပါ။
+
+ဒီ project ကို beginner နားလည်အောင် onboard လုပ်ပါ။
+
+လုပ်ရန်:
+1. File tree ကိုဖတ်ပါ
+2. README.md ကိုဖတ်ပါ
+3. COURSE_DECISIONS.md ကိုဖတ်ပါ
+4. package.json ရှိရင် scripts ကိုဖတ်ပါ
+5. Main folders တွေကိုရှင်းပြပါ
+6. မထိသင့်တဲ့ files/folders ရှိရင်ပြောပါ
+7. Next safe task ၃ ခုအကြံပြုပါ
+```
+
+Expected output—
+
+```text
+Project overview
+Folder explanation
+Important files
+Available scripts
+Safety notes
+Suggested next tasks
+```
+
+ဒီ use case က Level 3 CLI Agent ရဲ့ power ကို safe way နဲ့စတင်သုံးတာပါ။
+
+---
+
+# 14. Level 3 Use Case — Build/Test Diagnosis
+
+CLI Agent ရဲ့ အကျိုးအများဆုံးတစ်ခုက command output ကိုဖတ်ပြီး diagnosis လုပ်နိုင်တာပါ။
+
+Prompt—
+
+```text
+npm run build run ပါ။
+Error ရှိရင် code မပြင်ပါနဲ့။
+
+ပြန်ပေးရန်:
+- exact command run result
+- error summary
+- likely root cause
+- affected files
+- fix plan
+- approval request before editing
+```
+
+Good behavior—
+
+```text
+Agent run build
+Error ထွက်
+Error ကို summarize
+Fix plan ပေး
+User approve မှ edit
+Build rerun
+```
+
+Bad behavior—
+
+```text
+Agent error တွေ့တာနဲ့ package install
+file အများကြီးပြင်
+test မ run
+done လို့ပြော
+```
+
+Beginner rule—
+
+```text
+Diagnosis first. Edit later.
+```
+
+---
+
+# 15. Level 3 Use Case — Git Diff Review
+
+CLI Agent ကို code reviewer အနေနဲ့လည်းသုံးနိုင်တယ်။
+
+Prompt—
+
+```text
+Code မပြင်ပါနဲ့။
+git status နဲ့ git diff ကိုကြည့်ပြီး changes review လုပ်ပါ။
+
+စစ်ရန်:
+- changed files list
+- task scope ထဲပါလား
+- .env / secret ပါလား
+- node_modules/dist ပါလား
+- package.json/package-lock.json ပြောင်းထားလား
+- risk areas
+- manual verification steps
+- commit message suggestions
+```
+
+Expected output—
+
+```text
+Changed files summary
+Risk list
+Verification recommendation
+Commit message suggestions
+```
+
+ဒီ use case က Agentic Coding မှာ အလွန်အသုံးဝင်ပါတယ်။ Agent ကို code ရေးခိုင်းပြီးရင် အခြား Agent/session နဲ့ review လုပ်ခိုင်းတာ နောက်ပိုင်း Verifier/Auditor workflow အခြေခံဖြစ်လာမယ်။
+
+---
+
+# 16. Level 3 Use Case — Small Fix with Verification
+
+Prompt—
+
+```text
+Task:
+playground/chapter-9-editor-agent/app.js ထဲမှာ success message ကိုမြန်မာလိုပြင်ပါ။
+
+Safety:
+- git status စစ်ပါ
+- Allowed file တစ်ဖိုင်ပဲပြင်ပါ
+- package.json မပြင်ပါနဲ့
+- .env မဖတ်ပါနဲ့
+
+Steps:
+1. app.js ကိုဖတ်ပါ
+2. ပြင်မယ့် line ကိုရှင်းပြပါ
+3. Minimal edit လုပ်ပါ
+4. Manual test cases ပေးပါ
+5. git diff summary ပေးပါ
+```
+
+Good result—
+
+```text
+app.js only changed
+Message changed
+Manual tests provided
+git diff summary provided
+```
+
+---
+
+# 17. CLI Agent ရဲ့ အားသာချက်များ
+
+## 17.1 Repo context ပိုသိတယ်
+
+Editor Agent ထက် CLI Agent က project folder, file tree, package scripts, Git state စတာတွေကိုပိုသိနိုင်တယ်။
+
+## 17.2 Command output နဲ့ verify လုပ်နိုင်တယ်
+
+```text
+npm run build
+npm test
+git status
+git diff
+```
+
+တွေကို run/propose/analyze လုပ်နိုင်တယ်။
+
+## 17.3 Debugging ပိုအားကောင်းတယ်
+
+Error logs, test failures, build failures, missing scripts, wrong folder issues တွေကို terminal output နဲ့ diagnosis လုပ်နိုင်တယ်။
+
+## 17.4 Small project automation အတွက်ကောင်းတယ်
+
+```text
+file rename
+README update
+small test add
+small bug fix
+format/lint check
+```
+
+လို task တွေမှာအသုံးဝင်တယ်။
+
+## 17.5 Git workflow နဲ့ချိတ်နိုင်တယ်
+
+Agent က commit message suggest, diff summary, changed files list ပေးနိုင်တယ်။
+
+---
+
+# 18. CLI Agent ရဲ့ အန္တရာယ်များ
+
+## 18.1 Tool access power ကြီးတယ်
+
+CLI Agent က command run နိုင်တာကြောင့် wrong command က project/files/system ကိုထိနိုင်တယ်။
+
+## 18.2 Scope creep ပိုဖြစ်နိုင်တယ်
+
+Prompt မရှင်းရင် Agent က “ပိုကောင်းအောင်” file အများကြီးပြင်နိုင်တယ်။
+
+## 18.3 Build/test output ကိုမှားနားလည်နိုင်တယ်
+
+Agent က error root cause ကိုခန့်မှန်းမှားနိုင်တယ်။ User review လိုတယ်။
+
+## 18.4 Package install risk
+
+Agent က package install လုပ်ချင်နိုင်တယ်။ Dependency/security risk စစ်ရမယ်။
+
+## 18.5 Secrets exposure
+
+Agent က `.env` ဖတ်ဖို့ကြိုးစားမိနိုင်တယ်။ Rules/hooks/permissions နဲ့ကာကွယ်ရမယ်။
+
+---
+
+# 19. Beginner Safety Rules for CLI Agent
+
+```text
+Rule 1 — Project root မှန်ကြောင်း pwd + ls စစ်ပါ။
+Rule 2 — Feature မစခင် git status စစ်ပါ။
+Rule 3 — Working tree clean မဟုတ်ရင် code မပြင်ခိုင်းပါနဲ့။
+Rule 4 — Plan first for non-trivial tasks.
+Rule 5 — Allowed files / Do not touch list ထည့်ပါ။
+Rule 6 — .env, node_modules, dist မထိခိုင်းပါနဲ့။
+Rule 7 — package install မလုပ်ခင် reason/risk တောင်းပါ။
+Rule 8 — risky command မ run ခင် approval တောင်းပါ။
+Rule 9 — Agent ပြီးပြီဆိုရင် git diff review လုပ်ပါ။
+Rule 10 — Build/test/manual verification မရှိရင် Done မဟုတ်ပါ။
+```
+
+---
+
+# 20. Step-by-step Lab
+
+ဒီ lab မှာ CLI Agent ကို “safe read-only onboarding” နဲ့ “small verified edit” workflow အဖြစ်သုံးမယ်။ Tool မရှိသေးသူများအတွက် prompt/lab notes ကိုရေးထားပါ။ Tool setup ကို Part 3 မှာအသေးစိတ်လုပ်မယ်။
+
+## Lab Goal
+
+```text
+CLI Agent ကို project root ထဲမှာ runပြီး
+read-only overview → small edit plan → edit → manual test → git diff review
+workflow ကိုလေ့ကျင့်မယ်။
+```
+
+## Folder Structure
+
+```text
+agentic-zero-to-hero/
+└── playground/
+    └── chapter-10-cli-agent/
+        ├── index.html
+        ├── style.css
+        └── app.js
+```
+
+---
+
+## Step 1 — Project root ထဲဝင်ပါ
+
+```bash
+cd ~/Desktop/agentic-zero-to-hero
+pwd
+ls
+git status
+```
+
+Working tree clean ဖြစ်အောင်ထားပါ။
+
+---
+
+## Step 2 — Lab folder ဆောက်ပါ
+
+macOS/Linux/Git Bash—
+
+```bash
+mkdir -p playground/chapter-10-cli-agent
+cd playground/chapter-10-cli-agent
+touch index.html style.css app.js
+```
+
+Windows PowerShell—
+
+```powershell
+mkdir playground/chapter-10-cli-agent
+cd playground/chapter-10-cli-agent
+New-Item index.html
+New-Item style.css
+New-Item app.js
+```
+
+---
+
+## Step 3 — Starter files ထည့်ပါ
+
+### index.html
+
+```html
+<!DOCTYPE html>
+<html lang="my">
+  <head>
+    <meta charset="UTF-8">
+    <title>CLI Agent Practice</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+
+  <body>
+    <main class="page">
+      <section class="card">
+        <h1>CLI Agent Practice</h1>
+        <p>CLI Agent နဲ့ project folder ထဲမှာ safe workflow လေ့ကျင့်မည်။</p>
+
+        <form id="registration-form">
+          <label for="name">နာမည်</label>
+          <input id="name" name="name" type="text">
+
+          <label for="phone">ဖုန်းနံပါတ်</label>
+          <input id="phone" name="phone" type="tel">
+
+          <button type="submit">Register လုပ်မည်</button>
+        </form>
+
+        <p id="message" class="message"></p>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
+```
+
+### style.css
+
+```css
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.card {
+  width: 100%;
+  max-width: 480px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 24px;
+}
+
+label {
+  display: block;
+  margin-top: 16px;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+input,
+button {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 16px;
+}
+
+input {
+  border: 1px solid #d1d5db;
+}
+
+button {
+  margin-top: 20px;
+  border: none;
+  background: #2563eb;
+  color: white;
+  font-weight: 700;
+}
+
+.message {
+  margin-top: 16px;
+  font-weight: 700;
+}
+
+.message.error {
+  color: #b91c1c;
+}
+
+.message.success {
+  color: #15803d;
+}
+```
+
+### app.js
+
+```js
+function validateRegistrationForm(formData) {
+  if (!formData.name) {
+    return "Name is required";
+  }
+
+  if (!formData.phone) {
+    return "Phone is required";
+  }
+
+  return null;
+}
+
+const form = document.querySelector("#registration-form");
+const nameInput = document.querySelector("#name");
+const phoneInput = document.querySelector("#phone");
+const message = document.querySelector("#message");
+
+form.addEventListener("submit", function (event) {
+  event.preventDefault();
+
+  const formData = {
+    name: nameInput.value,
+    phone: phoneInput.value
+  };
+
+  const errorMessage = validateRegistrationForm(formData);
+
+  message.className = "message";
+
+  if (errorMessage) {
+    message.textContent = errorMessage;
+    message.classList.add("error");
+    return;
+  }
+
+  message.textContent = "Registration successful";
+  message.classList.add("success");
+});
+```
+
+---
+
+## Step 4 — Project root ပြန်သွားပါ
+
+```bash
+cd ~/Desktop/agentic-zero-to-hero
+```
+
+---
+
+## Step 5 — CLI Agent run ပါ
+
+Tool အလိုက်—
+
+```bash
+claude
+```
+
+သို့မဟုတ်—
+
+```bash
+codex
+```
+
+---
+
+## Step 6 — Read-only onboarding prompt ပေးပါ
+
+```text
+Read-only mode အနေနဲ့လုပ်ပါ။
+Code မပြင်ပါနဲ့။
+
+ဒီ project root မှန်လားစစ်ပါ:
+1. pwd
+2. ls
+3. git status
+
+ပြီးရင် playground/chapter-10-cli-agent folder ကိုရှင်းပြပါ။
+File ၃ ခုက ဘာတာဝန်ရှိလဲ beginner-friendly ရှင်းပါ။
+```
+
+Expected—
+
+```text
+index.html = structure
+style.css = style
+app.js = behavior
+Git status summary
+No code changes
+```
+
+---
+
+## Step 7 — Small edit plan prompt ပေးပါ
+
+```text
+Code မပြင်သေးပါနဲ့။
+
+Task:
+playground/chapter-10-cli-agent/app.js ထဲမှာ
+English validation messages နဲ့ success message ကို မြန်မာလိုပြင်ချင်ပါတယ်။
+Spaces-only input ကို invalid အဖြစ်စစ်ချင်ပါတယ်။
+
+Allowed file:
+- playground/chapter-10-cli-agent/app.js
+
+Do not edit:
+- index.html
+- style.css
+- package.json
+- .env
+- node_modules/**
+
+Plan ပေးပါ:
+- ဘာ lines ပြင်မလဲ
+- ဘာ behavior ပြောင်းမလဲ
+- manual test cases ဘာတွေလိုမလဲ
+```
+
+Agent plan ကိုဖတ်ပြီး approve လုပ်ပါ။
+
+---
+
+## Step 8 — Edit approve prompt
+
+```text
+Plan ကို approve လုပ်ပါတယ်။
+Allowed file တစ်ဖိုင်ပဲပြင်ပါ။
+ပြင်ပြီးရင် git diff summary ပေးပါ။
+```
+
+Expected changes—
+
+```text
+Name is required → နာမည်ဖြည့်ပါ။
+Phone is required → ဖုန်းနံပါတ်ဖြည့်ပါ။
+Registration successful → Registration အောင်မြင်ပါသည်။
+trim() ထည့်
+```
+
+---
+
+## Step 9 — Manual test
+
+Browser မှာ `index.html` ဖွင့်ပြီးစမ်းပါ။
+
+```text
+1. Empty name → နာမည်ဖြည့်ပါ။
+2. Spaces-only name → နာမည်ဖြည့်ပါ။
+3. Name filled, phone empty → ဖုန်းနံပါတ်ဖြည့်ပါ။
+4. Valid name + phone → Registration အောင်မြင်ပါသည်။
+```
+
+---
+
+## Step 10 — Git review and commit
+
+```bash
+git status
+git diff playground/chapter-10-cli-agent/app.js
+```
+
+အဆင်ပြေရင်—
+
+```bash
+git add playground/chapter-10-cli-agent/
+git commit -m "add level 3 cli agent practice"
+```
+
+---
+
+# 21. Lab Reflection
+
+Lab note ထဲမှာ ဒီလိုရေးပါ။
+
+```md
+# Chapter 10 Lab — CLI Agent
+
+## Goal
+CLI Agent ကို project root ထဲမှာ runပြီး read-only analysis, small edit, diff review workflow လေ့ကျင့်ခဲ့သည်။
+
+## Safety steps
+- pwd စစ်ခဲ့သည်
+- ls စစ်ခဲ့သည်
+- git status စစ်ခဲ့သည်
+- allowed file သတ်မှတ်ခဲ့သည်
+- .env/package.json/node_modules မထိရန်ပြောခဲ့သည်
+
+## Agent task
+app.js ထဲက English validation messages ကိုမြန်မာလိုပြောင်းပြီး spaces-only input ကို invalid အဖြစ်စစ်သည်။
+
+## Verification
+Manual browser tests:
+1. Empty name
+2. Spaces-only name
+3. Empty phone
+4. Valid form
+
+## Lesson
+CLI Agent သည် file edit တင်မက command output, Git status, project structure ကိုပါအသုံးပြုနိုင်သောကြောင့် powerful ဖြစ်သည်။ Permission, scope, Git review မရှိဘဲမသုံးသင့်။
+```
+
+---
+
+# 22. Copy-paste Prompts
+
+## 22.1 Safe CLI Agent Startup Prompt
+
+```text
+ကျွန်တော် beginner ပါ။
+ဒီ session ကို safe mode နဲ့စပါ။
+
+လုပ်ရန်:
+1. pwd run ပြီး current folder ပြပါ
+2. ls run ပြီး project root ဟုတ်/မဟုတ်စစ်ပါ
+3. git status run ပါ
+4. working tree clean မဟုတ်ရင် code မပြင်ပါနဲ့
+5. .env files မဖတ်ပါနဲ့
+6. package install မလုပ်ပါနဲ့
+7. destructive command မ run ပါနဲ့
+```
+
+## 22.2 Read-only Codebase Overview Prompt
+
+```text
+Read-only analysis လုပ်ပါ။
+Code မပြင်ပါနဲ့။
+
+ဒီ project ကို beginner နားလည်အောင်ရှင်းပြပါ။
+
+ပြန်ပေးရန်:
+- root folder
+- main folders
+- important files
+- available npm scripts
+- Git status summary
+- မထိသင့်သော files/folders
+- next safe tasks
+```
+
+## 22.3 Plan-first Fix Prompt
+
+```text
+Code မပြင်သေးပါနဲ့။
+Plan first လုပ်ပါ။
+
+Bug:
+[bug description]
+
+Expected:
+[expected behavior]
+
+Actual:
+[actual behavior]
+
+လုပ်ရန်:
+- relevant files ရှာပါ
+- root cause candidates ပေးပါ
+- minimal fix plan ပေးပါ
+- allowed files list အကြံပြုပါ
+- verification commands/manual tests ပေးပါ
+- approval တောင်းပါ
+```
+
+## 22.4 Safe Edit Prompt
+
+```text
+Plan ကို approve လုပ်ပါတယ်။
+
+Allowed files:
+- [file path]
+
+Do not touch:
+- .env
+- package.json
+- package-lock.json
+- node_modules/**
+- dist/**
+- services/api/**
+- deployment files
+
+လုပ်ရန်:
+- minimal edit ပဲလုပ်ပါ
+- behavior မလိုအပ်ဘဲမပြောင်းပါနဲ့
+- ပြီးရင် git diff summary ပေးပါ
+- manual test steps ပေးပါ
+```
+
+## 22.5 Build/Test Diagnosis Prompt
+
+```text
+npm run build run ပါ။
+Error ရှိရင် code မပြင်ပါနဲ့။
+
+ပြန်ပေးရန်:
+- exact command output summary
+- first meaningful error
+- likely root cause
+- affected files
+- fix plan
+- approval request before editing
+```
+
+## 22.6 Git Diff Review Prompt
+
+```text
+Code မပြင်ပါနဲ့။
+git status နဲ့ git diff ကို review လုပ်ပါ။
+
+စစ်ရန်:
+- changed files list
+- scope ထဲပါလား
+- secret/API key ပါလား
+- node_modules/dist/.env ပါလား
+- package.json/package-lock.json ပြောင်းထားလား
+- tests/build/manual verification လိုလား
+- commit message suggestions
+```
+
+---
+
+# 23. Expected Output
+
+ဒီအခန်းပြီးရင် learner က အောက်ပါ summary ကိုရေးနိုင်ရမယ်။
+
+```md
+# Level 3 — CLI Agent Summary
+
+## Definition
+CLI Agent ဆိုတာ terminal ထဲမှာ project folder ကို context အဖြစ်ယူပြီး files ဖတ်ခြင်း၊ file edit ခြင်း၊ command run ခြင်း၊ test/build output ဖတ်ခြင်းတို့လုပ်နိုင်တဲ့ coding assistant ဖြစ်တယ်။
+
+## Difference from Level 2
+Level 2 Editor Agent က selected file/code edit အတွက်ကောင်းတယ်။
+Level 3 CLI Agent က project root, file tree, terminal commands, Git status, test/build output နဲ့အလုပ်လုပ်နိုင်တယ်။
+
+## Good For
+- Read-only project onboarding
+- package.json scripts explanation
+- build/test diagnosis
+- small bug fix with verification
+- git diff review
+- safe command explanation
+
+## Risks
+- risky command run
+- wrong project folder
+- scope creep
+- package install risk
+- secret exposure
+- Git destructive command
+
+## Workflow
+pwd + ls → git status → read-only analysis → plan → approval → edit → verify → git diff → commit
+
+## Rule
+CLI Agent ကို command/file edit permission ပေးမယ်ဆိုရင် scope, do-not-touch list, verification, approval gate ထည့်ရမယ်။
+```
+
+---
+
+# 24. Common Errors
+
+## Error 1 — Project root မမှန်ဘဲ Agent run ခြင်း
+
+ပြဿနာ—
+
+```text
+Agent က wrong folder context နဲ့အလုပ်လုပ်နိုင်တယ်။
+```
+
+ပြင်နည်း—
+
+```bash
+pwd
+ls
+```
+
+Prompt—
+
+```text
+Current folder က project root ဟုတ်/မဟုတ်စစ်ပါ။
+```
+
+---
+
+## Error 2 — Working tree dirty ဖြစ်နေချိန် code ပြင်ခိုင်းခြင်း
+
+ပြဿနာ—
+
+```text
+Existing uncommitted changes နဲ့ Agent changes ရောသွားမယ်။
+```
+
+ပြင်နည်း—
+
+```bash
+git status
+git diff
+```
+
+Working tree clean မဟုတ်ရင် commit/stash/review လုပ်ပြီးမှ Agent ခိုင်းပါ။
+
+---
+
+## Error 3 — Plan မတောင်းဘဲ edit ခိုင်းခြင်း
+
+မကောင်း—
+
+```text
+Bug fix လုပ်ပါ။
+```
+
+ကောင်း—
+
+```text
+Code မပြင်သေးပါနဲ့။
+Root cause နဲ့ fix plan အရင်ပေးပါ။
+```
+
+---
+
+## Error 4 — Agent ကို package install ခွင့်ပေးမိခြင်း
+
+မကောင်း—
+
+```text
+လိုတာ install လုပ်ပါ။
+```
+
+ကောင်း—
+
+```text
+Package install မလုပ်ခင် name, reason, alternatives, risk, files changed ကိုပြပါ။
+```
+
+---
+
+## Error 5 — .env ကို context ထဲထည့်မိခြင်း
+
+`.env` ထဲမှာ secrets ပါနိုင်တယ်။ CLI Agent ကို မဖတ်ခိုင်းပါနဲ့။
+
+Prompt rule—
+
+```text
+.env files မဖတ်ပါနဲ့။ Secret values မဖော်ပြပါနဲ့။
+.env.example ကိုသာကြည့်ပါ။
+```
+
+---
+
+## Error 6 — Build/test မ run ဘဲ “Done” လက်ခံခြင်း
+
+Agent က code ပြင်ပြီး “done” လို့ပြောတာနဲ့မလုံလောက်ပါ။
+
+Done checklist—
+
+```text
+[ ] build/test/manual verification
+[ ] git diff summary
+[ ] changed files list
+[ ] risks
+```
+
+---
+
+## Error 7 — Git diff မစစ်ဘဲ commit လုပ်ခြင်း
+
+ပြဿနာ—
+
+```text
+မလိုအပ်တဲ့ files, secret, package changes ပါသွားနိုင်တယ်။
+```
+
+ပြင်နည်း—
+
+```bash
+git status
+git diff
+git diff --staged
+```
+
+---
+
+# 25. Debug / Recovery
+
+## 25.1 CLI Agent က wrong file ပြင်သွားရင်
+
+Prompt—
+
+```text
+Code မပြင်သေးပါနဲ့။
+Agent က wrong file ပြင်ထားနိုင်ပါတယ်။
+
+လုပ်ရန်:
+1. git status စစ်ပါ
+2. changed files list ပေးပါ
+3. allowed scope ထဲမပါတဲ့ files ကိုဖော်ပြပါ
+4. rollback options ပေးပါ
+5. git restore command မ run ခင် approval တောင်းပါ
+```
+
+## 25.2 Command output ရှုပ်နေရင်
+
+Prompt—
+
+```text
+ဒီ terminal output ကို beginner နားလည်အောင် summarize လုပ်ပါ။
+
+စည်းကမ်း:
+- first meaningful error ကိုရှာပါ
+- warning နဲ့ error ခွဲပါ
+- root cause candidates ပေးပါ
+- code မပြင်သေးပါနဲ့
+
+Output:
+[paste output]
+```
+
+## 25.3 npm run build fail ဖြစ်ရင်
+
+Prompt—
+
+```text
+npm run build fail ဖြစ်ပါတယ်။
+
+Details:
+[paste output]
+
+လုပ်ရန်:
+- first error ကိုရှာပါ
+- affected file ကိုပြပါ
+- root cause candidates ပေးပါ
+- minimal fix plan ပေးပါ
+- approval မရသေးဘဲ file မပြင်ပါနဲ့
+```
+
+## 25.4 Agent က package install လုပ်ပြီး project ပျက်သွားရင်
+
+Prompt—
+
+```text
+Package install ပြီး project ပျက်သွားပါတယ်။
+Code မပြင်သေးပါနဲ့။
+
+လုပ်ရန်:
+- git status စစ်ပါ
+- package.json diff summary ပေးပါ
+- package-lock.json diff summary ပေးပါ
+- newly added packages list ပေးပါ
+- rollback options ပေးပါ
+- npm uninstall vs git restore နှိုင်းယှဉ်ပါ
+```
+
+## 25.5 CLI Agent session ရှုပ်သွားရင်
+
+လုပ်ရန်—
+
+```text
+1. Stop editing
+2. Ask summary
+3. git status
+4. git diff
+5. Decide commit/rollback
+6. Start fresh session if needed
+```
+
+Prompt—
+
+```text
+ဒီ session ကို summarize လုပ်ပါ။
+
+ပြန်ပေးရန်:
+- ဘာ task လုပ်နေလဲ
+- ဘာ files ဖတ်ခဲ့လဲ
+- ဘာ files ပြင်ခဲ့လဲ
+- ဘာ commands run ခဲ့လဲ
+- current status
+- next safe step
+```
+
+---
+
+# 26. Verification Checklist
+
+ဒီအခန်းကို နားလည်ပြီလား စစ်ပါ။
+
+```text
+[ ] Level 3 CLI Agent ဆိုတာဘာလဲရှင်းပြနိုင်တယ်
+[ ] Editor Agent နဲ့ CLI Agent ကွာခြားချက်သိတယ်
+[ ] CLI Agent ကို project root ထဲမှာ run ရမယ်ဆိုတာနားလည်တယ်
+[ ] pwd + ls + git status ကို session စချိန်စစ်နိုင်တယ်
+[ ] CLI Agent က file read/edit, command run, test/build output analyze လုပ်နိုင်ကြောင်းသိတယ်
+[ ] Plan-first workflow ကိုသုံးနိုင်တယ်
+[ ] Allowed files / do-not-touch list ထည့်နိုင်တယ်
+[ ] .env, node_modules, dist မထိခိုင်းသင့်ကြောင်းသိတယ်
+[ ] package install မလုပ်ခင် risk review တောင်းနိုင်တယ်
+[ ] build/test diagnosis prompt ရေးနိုင်တယ်
+[ ] git diff review prompt ရေးနိုင်တယ်
+[ ] destructive command မ run ခင် approval gate ထည့်နိုင်တယ်
+[ ] Agent ပြီးပြီဆိုတိုင်း Done မဟုတ်ကြောင်းနားလည်တယ်
+[ ] Git diff + verification result စစ်ပြီးမှ commit လုပ်ရမယ်ဆိုတာသိတယ်
+```
+
+---
+
+# 27. Mini Assignment
+
+## Assignment 1 — Level 3 Definition ရေးပါ
+
+ကိုယ်ပိုင်စကားနဲ့ရေးပါ။
+
+```text
+Level 3: CLI Agent ဆိုတာ...
+```
+
+ပါရမယ့်အချက်—
+
+```text
+- terminal ထဲမှာ run
+- project folder ကိုဖတ်နိုင်
+- file edit လုပ်နိုင်
+- commands run နိုင်
+- test/build output ကိုဖတ်နိုင်
+- user permission/review လို
+```
+
+---
+
+## Assignment 2 — Level 2 vs Level 3 Table ရေးပါ
+
+Columns—
+
+```text
+Capability
+Level 2 Editor Agent
+Level 3 CLI Agent
+```
+
+Rows—
+
+```text
+Works in editor
+Works in terminal
+Reads project root
+Edits selected file
+Runs commands
+Runs tests/build
+Reviews git status/diff
+Main risk
+Best use
+```
+
+---
+
+## Assignment 3 — Safe Startup Prompt ရေးပါ
+
+CLI Agent session စချိန်မှာပေးမယ့် safe startup prompt ရေးပါ။
+
+ပါရမယ့်အချက်—
+
+```text
+- pwd
+- ls
+- git status
+- no edit if dirty
+- no .env access
+- no package install
+- no destructive command
+```
+
+---
+
+## Assignment 4 — Build Error Diagnosis Prompt ရေးပါ
+
+`npm run build` fail ဖြစ်တဲ့အခါ Agent ကိုမေးမယ့် prompt ရေးပါ။
+
+ပါရမယ့်အချက်—
+
+```text
+- error output
+- code မပြင်သေးပါနဲ့
+- first meaningful error
+- likely root cause
+- affected files
+- fix plan
+- approval before edit
+```
+
+---
+
+## Assignment 5 — Risky Commands ခွဲပါ
+
+အောက်ပါ command တွေထဲက risky commands ကိုရွေးပြီးဘာကြောင့် risky လဲရေးပါ။
+
+```text
+pwd
+ls
+git status
+npm run build
+npm install lodash
+rm -rf dist
+git reset --hard
+cat .env
+git diff
+npm audit fix --force
+```
+
+Expected reasoning—
+
+```text
+npm install lodash → package.json/package-lock/node_modules ပြောင်းနိုင်
+rm -rf dist → files delete
+git reset --hard → uncommitted changes ဆုံးရှုံးနိုင်
+cat .env → secrets leak
+npm audit fix --force → breaking dependency changes ဖြစ်နိုင်
+```
+
+---
+
+## Assignment 6 — CLI Agent Prompt ရေးပါ
+
+Task—
+
+```text
+playground/chapter-10-cli-agent/app.js ထဲမှာ validation messages ကိုမြန်မာလိုပြင်ချင်တယ်။
+```
+
+Prompt ထဲမှာပါရမယ့်အချက်—
+
+```text
+- Plan first
+- git status check
+- allowed file
+- do-not-touch list
+- approval before edit
+- manual tests
+- git diff summary
+```
+
+---
+
+# 28. Chapter Summary
+
+ဒီအခန်းမှာ **Level 3 — CLI Agent** ကိုလေ့လာခဲ့တယ်။
+
+အရေးကြီးဆုံး mental model—
+
+```text
+CLI Agent = Terminal ထဲက project-aware coding assistant
+```
+
+Level 3 မှာ Agent က—
+
+```text
+project folder ဖတ်နိုင်
+files edit လုပ်နိုင်
+terminal commands run နိုင်
+test/build output analyze လုပ်နိုင်
+git status/diff review လုပ်နိုင်
+```
+
+ဒါပေမယ့် power ကြီးသလောက် safety လိုတယ်။
+
+Level 3 workflow—
+
+```text
+pwd + ls
+→ git status
+→ read-only analysis
+→ plan
+→ approval
+→ edit
+→ verify
+→ git diff
+→ commit
+```
+
+Level 3 ကိုသုံးသင့်တဲ့နေရာ—
+
+```text
+Project onboarding
+package.json scripts explanation
+Build/test diagnosis
+Small verified bug fix
+Git diff review
+Safe command explanation
+```
+
+Level 3 မှာသတိထားရမယ့်အရာ—
+
+```text
+Wrong folder
+Dirty Git state
+Package install
+Destructive commands
+.env exposure
+Scope creep
+Unverified “done”
+```
+
+အရေးကြီးဆုံး rule—
+
+```text
+CLI Agent ကို command/file edit permission ပေးမယ်ဆိုရင် scope, do-not-touch list, verification, approval gate မဖြစ်မနေထည့်ပါ။
+```
+

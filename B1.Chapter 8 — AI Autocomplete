@@ -1,0 +1,1638 @@
+# Chapter 8 — Level 1: AI Autocomplete
+
+## 1. Learning Objectives
+
+ဒီအခန်းပြီးသွားရင် သင်က အောက်ပါအရာတွေကို နားလည်ရပါမယ်။
+
+```text
+[ ] Level 1: AI Autocomplete ဆိုတာဘာလဲ ရှင်းပြနိုင်မယ်
+[ ] Level 0 ChatGPT Code Example နဲ့ Level 1 AI Autocomplete ကွာခြားချက်သိမယ်
+[ ] Autocomplete, IntelliSense, AI Autocomplete, Snippet တို့ကွာခြားချက်ကိုနားလည်မယ်
+[ ] Ghost text suggestion ဆိုတာဘာလဲ သိမယ်
+[ ] AI autocomplete ကို accept / ignore / edit လုပ်သင့်တဲ့အချိန်ကိုခွဲနိုင်မယ်
+[ ] AI suggestion ကို မျက်စိမှိတ်မယူသင့်ကြောင်းနားလည်မယ်
+[ ] HTML/CSS/JavaScript code ရေးတဲ့အခါ AI autocomplete က ဘယ်လိုကူညီနိုင်လဲမြင်နိုင်မယ်
+[ ] Beginner အနေနဲ့ autocomplete ကို learning tool အဖြစ်သုံးတတ်မယ်
+[ ] Autocomplete ကြောင့်ဖြစ်နိုင်တဲ့ bugs, wrong assumptions, security risks တွေကိုသိမယ်
+[ ] Level 1 ကနေ Editor Agent / CLI Agent အဆင့်ကို ဘာကြောင့်တက်ရမလဲနားလည်မယ်
+```
+
+ဒီအခန်းမှာ coding agent က project ထဲဝင်ပြီး file ပြင်တာမလုပ်သေးပါဘူး။ အခုအဆင့်မှာ AI က **သင်ရေးနေတဲ့ code ကို editor ထဲမှာ ဆက်ရေးပေးတဲ့ assistant** အဖြစ်ပါလာတာပါ။
+
+---
+
+## 2. Beginner Explanation
+
+Level 0 မှာ သင်က ChatGPT ကို code example တောင်းတယ်။ ChatGPT က code block ပေးတယ်။ သင်က copy-paste လုပ်တယ်။
+
+Level 1 မှာတော့ သင် code editor ထဲမှာ ကိုယ်တိုင်ရေးနေတယ်။ AI က သင်ရိုက်နေတဲ့နေရာမှာ **နောက်လာနိုင်တဲ့ code ကို ခန့်မှန်းပြီးပြပေးတယ်**။
+
+ဥပမာ သင်က ဒီလိုစရေးတယ်—
+
+```js
+function calculateRemainingSeats(capacity, registeredCount) {
+```
+
+AI Autocomplete က ဒီလိုဆက်ရေးပေးနိုင်တယ်—
+
+```js
+  return capacity - registeredCount;
+}
+```
+
+သို့မဟုတ် သင်က comment ရေးတယ်—
+
+```js
+// Validate that name and phone are not empty
+```
+
+AI က validation function တစ်ခု suggest လုပ်နိုင်တယ်။
+
+ဒီ flow ကို diagram နဲ့ကြည့်ရင်—
+
+```text
+User writes code in editor
+   ↓
+AI reads nearby code/context
+   ↓
+AI suggests next line/block
+   ↓
+User accepts, edits, or ignores
+   ↓
+User remains responsible
+```
+
+GitHub Copilot official docs မှာ Copilot က editor ထဲမှာ code ရေးနေစဉ် suggestions ပေးနိုင်ပြီး dimmed “ghost text” အနေနဲ့ cursor နေရာမှာ inline ပြနိုင်တယ်လို့ဖော်ပြထားပါတယ်။ Comment ထဲမှာ natural language နဲ့ ဘာလုပ်ချင်လဲရေးထားရင်လည်း Copilot က အဲဒီ goal ကိုအကောင်အထည်ဖော်မယ့် code ကို suggest လုပ်နိုင်တယ်လို့ docs မှာဖော်ပြထားပါတယ်။ ([GitHub Docs][1])
+
+---
+
+# 3. Level 1 ဆိုတာဘာလဲ
+
+Level 1: AI Autocomplete ဆိုတာ—
+
+```text
+Editor ထဲမှာ user ရေးနေတဲ့ code ကို AI က context ကြည့်ပြီး ဆက်ရေးပေးတဲ့အဆင့်
+```
+
+ပါ။
+
+Level 1 မှာ AI က—
+
+```text
+[✓] Line တစ်ကြောင်းကိုဆက်ရေးပေးနိုင်
+[✓] Function body ကိုခန့်မှန်းပေးနိုင်
+[✓] Comment မှာရေးထားတဲ့ intention ကို code အဖြစ်ပြောင်းပေးနိုင်
+[✓] Repetitive pattern တွေကိုဖြည့်ပေးနိုင်
+[✓] HTML/CSS/JS boilerplate ကိုမြန်စေနိုင်
+[✓] Variable/function naming ကိုကူညီနိုင်
+```
+
+ဒါပေမယ့် Level 1 မှာ AI က—
+
+```text
+[✗] Project တစ်ခုလုံးကို plan မဆွဲနိုင်သေး
+[✗] File အများကြီးကို coordinated edit မလုပ်နိုင်သေး
+[✗] Terminal command မ run နိုင်သေး
+[✗] Build/test result ကိုကိုယ်တိုင်မစစ်နိုင်သေး
+[✗] Git diff review မလုပ်နိုင်သေး
+[✗] Product requirement ကိုအမြဲမှန်အောင်နားလည်မယ်လို့မအာမခံနိုင်
+```
+
+Level 1 ကို အလွယ်မှတ်ရင်—
+
+```text
+AI Autocomplete = typing assistant
+Coding Agent = project assistant
+```
+
+Level 1 က သင် code ရေးနေတဲ့အချိန်မှာအထောက်အကူပြုတယ်။ ဒါပေမယ့် project တစ်ခုလုံးကိုထိန်းပေးတဲ့ agent မဟုတ်သေးဘူး။
+
+---
+
+# 4. Level 0 vs Level 1
+
+| အချက်       | Level 0: ChatGPT Code Example   | Level 1: AI Autocomplete           |
+| ----------- | ------------------------------- | ---------------------------------- |
+| User action | Chat ထဲ prompt ရေး              | Editor ထဲ code ရေး                 |
+| AI output   | Code block / explanation        | Inline suggestion / ghost text     |
+| Copy-paste  | User copy-paste လုပ်            | Suggestion ကို accept/ignore လုပ်  |
+| Context     | Prompt ထဲပေးသလောက်              | Current file / nearby code context |
+| Best use    | Learning, snippets, explanation | Speed up typing, repeat patterns   |
+| Risk        | Code block မကိုက်နိုင်          | Suggestion မှားတာကို လက်ခံမိနိုင်  |
+| User role   | Reader + copy-paster + tester   | Driver + reviewer + tester         |
+
+Level 0 က “AI ဆီက code example ယူတာ” ဖြစ်တယ်။ Level 1 က “ကိုယ်ရေးနေတဲ့ code ကို AI က editor ထဲမှာ ဆက်ရေးပေးတာ” ဖြစ်တယ်။
+
+---
+
+# 5. Autocomplete အမျိုးအစားများ
+
+Autocomplete ဆိုတာ တစ်မျိုးတည်းမဟုတ်ပါဘူး။ Beginner အတွက် ခွဲသိထားရမယ့် ၃ မျိုးရှိတယ်။
+
+```text
+1. Traditional autocomplete / IntelliSense
+2. Snippets
+3. AI autocomplete
+```
+
+---
+
+## 5.1 Traditional Autocomplete / IntelliSense
+
+Traditional autocomplete က language server/editor က code structure ကိုသိပြီး suggestions ပေးတာပါ။
+
+ဥပမာ JavaScript file ထဲမှာ—
+
+```js
+document.
+```
+
+လို့ရေးရင် editor က—
+
+```text
+querySelector
+getElementById
+addEventListener
+```
+
+လို available methods တွေပြနိုင်တယ်။
+
+VS Code official docs မှာ IntelliSense က language server suggestions, snippets, word-based textual completions စတဲ့ completions အမျိုးမျိုးပေးနိုင်တယ်လို့ဖော်ပြထားပါတယ်။ ([Visual Studio Code][2])
+
+Traditional autocomplete က များသောအားဖြင့်—
+
+```text
+Available functions
+Variable names
+Object properties
+Imports
+Language syntax
+```
+
+တွေကိုအခြေခံပြီး suggest လုပ်တယ်။
+
+---
+
+## 5.2 Snippets
+
+Snippet ဆိုတာ predefined template ပါ။
+
+ဥပမာ HTML boilerplate snippet—
+
+```html
+<!DOCTYPE html>
+<html lang="my">
+  <head>
+    <meta charset="UTF-8">
+    <title>Page Title</title>
+  </head>
+  <body>
+  </body>
+</html>
+```
+
+Snippet က AI မဟုတ်ပါဘူး။ Template shortcut ပါ။
+
+ဥပမာ—
+
+```text
+html:5
+```
+
+ရေးပြီး Tab နှိပ်တာမျိုးက snippet ဖြစ်နိုင်တယ်။
+
+Snippets က useful ဖြစ်တဲ့နေရာ—
+
+```text
+Repeated boilerplate
+HTML skeleton
+React component skeleton
+Test file template
+Function template
+```
+
+---
+
+## 5.3 AI Autocomplete
+
+AI autocomplete က traditional autocomplete ထက်ပို context-aware ဖြစ်နိုင်တယ်။ Nearby code, comment, variable names, current pattern တွေကိုကြည့်ပြီး next line/block ကိုခန့်မှန်းပေးတယ်။
+
+ဥပမာ—
+
+```js
+const events = [
+  { title: "AI Workshop", capacity: 100, registeredCount: 25 }
+];
+
+function getRemainingSeats(event) {
+```
+
+AI က—
+
+```js
+  return event.capacity - event.registeredCount;
+}
+```
+
+လို suggest လုပ်နိုင်တယ်။
+
+AI autocomplete က “ဒီ variable ထဲမှာ ဘာ data ရှိမလဲ” ကိုခန့်မှန်းပြီး code ဆက်ရေးနိုင်တဲ့အတွက် powerful ဖြစ်တယ်။ ဒါပေမယ့် ခန့်မှန်းတာဖြစ်လို့ မှားနိုင်တယ်။
+
+---
+
+# 6. Ghost Text ဆိုတာဘာလဲ
+
+AI autocomplete tools တွေမှာ suggestion ကို dimmed text, gray text, ghost text အနေနဲ့ပြတာများတယ်။
+
+ဥပမာ သင်ရေးနေတယ်—
+
+```js
+function formatPhoneNumber(phone) {
+```
+
+Editor ထဲမှာ AI က gray text နဲ့ဒီလိုပြနိုင်တယ်—
+
+```js
+  return phone.replace(/\D/g, "");
+}
+```
+
+သင်က suggestion ကို—
+
+```text
+Accept   → ယူမယ်
+Ignore   → မယူဘဲဆက်ရေးမယ်
+Edit     → ယူပြီးပြင်မယ်
+```
+
+လုပ်နိုင်တယ်။
+
+VS Code documentation က Copilot inline suggestions ကို “ghost text suggestions” အဖြစ်ဖော်ပြပြီး editor ထဲမှာ စာရိုက်နေချိန် cursor နေရာမှာ dimmed suggestion ပြနိုင်တယ်လို့ရှင်းပြထားပါတယ်။ ([Visual Studio Code][3])
+
+Beginner rule—
+
+```text
+Ghost text ပေါ်လာတိုင်း မယူပါနဲ့။
+ဖတ်ပါ → နားလည်ပါ → လိုအပ်ရင်ယူပါ → ပြင်ပါ → test လုပ်ပါ။
+```
+
+---
+
+# 7. Level 1 ကို ဘယ်အချိန်သုံးသင့်လဲ
+
+## 7.1 Repetitive code ရေးတဲ့အခါ
+
+ဥပမာ HTML form fields တစ်ခုချင်းစီရေးနေတဲ့အခါ—
+
+```html
+<label for="name">နာမည်</label>
+<input id="name" name="name" type="text">
+```
+
+AI က phone/email field patterns ဆက်ရေးပေးနိုင်တယ်။
+
+## 7.2 Function body တိုတိုရေးတဲ့အခါ
+
+ဥပမာ—
+
+```js
+function calculateRemainingSeats(capacity, registeredCount) {
+```
+
+AI က—
+
+```js
+  return capacity - registeredCount;
+}
+```
+
+လို suggest လုပ်နိုင်တယ်။
+
+## 7.3 Data shape ထပ်တူရေးတဲ့အခါ
+
+ဥပမာ event objects list—
+
+```js
+const events = [
+  {
+    id: 1,
+    title: "AI Workshop",
+    date: "2026-08-01",
+    location: "Yangon"
+  },
+```
+
+AI က နောက် object ကို pattern တူဆက်ရေးပေးနိုင်တယ်။
+
+## 7.4 Tests skeleton ရေးတဲ့အခါ
+
+ဥပမာ—
+
+```js
+test("returns remaining seats", () => {
+```
+
+AI က arrange/act/assert structure ကို suggest လုပ်နိုင်တယ်။
+
+## 7.5 Comments ကို code အဖြစ်ပြောင်းချင်တဲ့အခါ
+
+```js
+// Return true when name and phone are both provided
+```
+
+AI က validation function တစ်ခု suggest လုပ်နိုင်တယ်။
+
+---
+
+# 8. Level 1 ကို ဘယ်အချိန်သတိထားသင့်လဲ
+
+## 8.1 Security-sensitive code
+
+ဥပမာ—
+
+```text
+authentication
+password handling
+token storage
+payment
+admin authorization
+database delete
+deployment script
+```
+
+AI suggestion ကို မျက်စိမှိတ်မယူရပါ။
+
+## 8.2 Business rules အရေးကြီးတဲ့ code
+
+Event Management project မှာ—
+
+```text
+duplicate registration prevention
+ticket code uniqueness
+check-in already done warning
+role-based access control
+rate limiting
+```
+
+လို logic တွေမှာ suggestion ကိုသေချာစစ်ရမယ်။
+
+## 8.3 Data privacy ပါတဲ့ code
+
+Phone, email, name, ticket code စတဲ့ PII data ကို log ထဲမထည့်သင့်ပါ။
+
+AI က ဒီလို suggest လုပ်နိုင်တယ်—
+
+```js
+console.log(attendee);
+```
+
+ဒါက production code မှာ privacy risk ဖြစ်နိုင်တယ်။
+
+## 8.4 Package import suggestion
+
+AI autocomplete က package/library import ကို suggest လုပ်နိုင်တယ်။ Package project ထဲ install မလုပ်ထားရင် error ဖြစ်မယ်။
+
+ဥပမာ—
+
+```js
+import dayjs from "dayjs";
+```
+
+ဒါကို accept မလုပ်ခင်—
+
+```text
+dayjs install လုပ်ထားလား?
+တကယ်လိုလား?
+built-in Date နဲ့ရလား?
+package install risk ရှိလား?
+```
+
+စစ်ပါ။
+
+---
+
+# 9. AI Autocomplete ကို သုံးတဲ့ Basic Workflow
+
+```text
+1. ကိုယ်လိုချင်တဲ့ function/comment ကိုရှင်းရှင်းရေး
+2. AI suggestion ပေါ်လာမယ်
+3. Suggestion ကိုအပြည့်မယူခင်ဖတ်
+4. Logic မှန်/မမှန်စစ်
+5. လိုအပ်ရင် accept
+6. Accept ပြီး code ကို edit
+7. Run/test လုပ်
+8. Git diff review
+```
+
+အရေးကြီးဆုံး rule—
+
+```text
+Autocomplete က driver မဟုတ်ဘူး။
+သင်က driver ပါ။
+```
+
+AI က steering wheel ကိုကိုင်မထားသင့်ဘူး။ Suggestion ပေးတယ်။ သင်ကဆုံးဖြတ်တယ်။
+
+---
+
+# 10. Autocomplete-Friendly Code ရေးနည်း
+
+AI autocomplete က context ကြည့်ပြီး suggest လုပ်တာဖြစ်လို့ context ကိုရှင်းအောင်ရေးရင် suggestion ကောင်းလာနိုင်တယ်။
+
+## 10.1 Function name ကိုရှင်းရှင်းရေး
+
+မကောင်း—
+
+```js
+function check(x) {
+```
+
+ကောင်း—
+
+```js
+function validateRegistrationForm(formData) {
+```
+
+AI က function name ရှင်းရင် body ကိုပိုမှန်ခန့်မှန်းနိုင်တယ်။
+
+## 10.2 Variable name ကို meaning ရှိအောင်ရေး
+
+မကောင်း—
+
+```js
+const x = 100;
+const y = 25;
+```
+
+ကောင်း—
+
+```js
+const capacity = 100;
+const registeredCount = 25;
+```
+
+## 10.3 Comment ကို intention အဖြစ်ရေး
+
+```js
+// Return an error message when name or phone is missing
+function validateRegistrationForm(formData) {
+```
+
+AI က comment ကို context အဖြစ်သုံးပြီး suggestion ပေးနိုင်တယ်။
+
+## 10.4 Data shape ကိုအရင်ရေး
+
+```js
+const attendee = {
+  name: "Aung Aung",
+  phone: "09123456789",
+  ticketCode: "EVT-001",
+  checkedInAt: null
+};
+```
+
+ပြီးမှ—
+
+```js
+function isCheckedIn(attendee) {
+```
+
+ရေးရင် AI က data shape သိသွားနိုင်တယ်။
+
+---
+
+# 11. Example — HTML Autocomplete
+
+သင်က ဒီလိုစရေးတယ်—
+
+```html
+<form id="registration-form">
+  <label for="name">နာမည်</label>
+```
+
+AI က pattern ကိုမြင်ပြီး—
+
+```html
+  <input id="name" name="name" type="text" required>
+
+  <label for="phone">ဖုန်းနံပါတ်</label>
+  <input id="phone" name="phone" type="tel" required>
+
+  <button type="submit">Register လုပ်မည်</button>
+</form>
+```
+
+လို suggest လုပ်နိုင်တယ်။
+
+စစ်ရမယ့်အချက်—
+
+```text
+[ ] label for နဲ့ input id ကိုက်လား
+[ ] name attribute ပါလား
+[ ] type မှန်လား
+[ ] required လိုလား
+[ ] မြန်မာ UI text မှန်လား
+```
+
+---
+
+# 12. Example — CSS Autocomplete
+
+သင်ရေးတယ်—
+
+```css
+.event-card {
+  background:
+```
+
+AI က—
+
+```css
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 24px;
+}
+```
+
+လို suggest လုပ်နိုင်တယ်။
+
+စစ်ရမယ့်အချက်—
+
+```text
+[ ] class name HTML နဲ့ကိုက်လား
+[ ] mobile layout ပျက်လား
+[ ] color contrast ကောင်းလား
+[ ] repeated CSS မများလား
+```
+
+---
+
+# 13. Example — JavaScript Autocomplete
+
+သင်ရေးတယ်—
+
+```js
+function validateRegistrationForm(formData) {
+```
+
+AI က—
+
+```js
+  if (!formData.name) {
+    return "နာမည်ဖြည့်ပါ။";
+  }
+
+  if (!formData.phone) {
+    return "ဖုန်းနံပါတ်ဖြည့်ပါ။";
+  }
+
+  return null;
+}
+```
+
+လို suggest လုပ်နိုင်တယ်။
+
+စစ်ရမယ့်အချက်—
+
+```text
+[ ] formData undefined ဖြစ်နိုင်လား
+[ ] name/phone trim လုပ်ထားလား
+[ ] phone format စစ်ဖို့လိုလား
+[ ] error message user-friendly ဖြစ်လား
+[ ] null return ကို calling code က handle လုပ်လား
+```
+
+ပိုကောင်းအောင်ပြင်နိုင်တဲ့ version—
+
+```js
+function validateRegistrationForm(formData) {
+  const name = formData.name.trim();
+  const phone = formData.phone.trim();
+
+  if (name === "") {
+    return "နာမည်ဖြည့်ပါ။";
+  }
+
+  if (phone === "") {
+    return "ဖုန်းနံပါတ်ဖြည့်ပါ။";
+  }
+
+  return null;
+}
+```
+
+AI suggestion ကိုယူပြီး ပြန်ပြင်နိုင်တာက Level 1 ရဲ့အရေးကြီး skill ပါ။
+
+---
+
+# 14. Example — React Autocomplete
+
+နောက်ပိုင်း React သင်တဲ့အခါ ဒီလိုတွေ့မယ်။
+
+သင်ရေးတယ်—
+
+```jsx
+function EventCard({ event }) {
+  return (
+```
+
+AI က—
+
+```jsx
+    <article className="event-card">
+      <h2>{event.title}</h2>
+      <p>{event.date}</p>
+      <p>{event.location}</p>
+    </article>
+  );
+}
+```
+
+လို suggest လုပ်နိုင်တယ်။
+
+စစ်ရမယ့်အချက်—
+
+```text
+[ ] event undefined ဖြစ်နိုင်လား
+[ ] date format လိုလား
+[ ] accessibility / semantic HTML ကောင်းလား
+[ ] button/action လိုလား
+[ ] className မှန်လား, class မဟုတ်ကြောင်းစစ်
+```
+
+React မှာ AI suggestion တွေကမြန်စေတယ်။ ဒါပေမယ့် props, state, event handler, API call logic တွေကိုသေချာစစ်ရမယ်။
+
+---
+
+# 15. Level 1 ရဲ့ အားသာချက်များ
+
+## 15.1 Typing speed မြန်စေတယ်
+
+Boilerplate code, repeated patterns, similar objects, test skeleton တွေကိုမြန်စေတယ်။
+
+## 15.2 Beginner ကို pattern မြင်စေတယ်
+
+AI က suggest လုပ်တဲ့ code ကိုဖတ်ရင်း—
+
+```text
+function structure
+form validation pattern
+CSS class pattern
+array/object pattern
+```
+
+တွေမြင်နိုင်တယ်။
+
+## 15.3 Comment-to-code learning ကောင်းတယ်
+
+Beginner က comment ကို natural language နဲ့ရေးပြီး AI suggestion ကို code အဖြစ်မြင်နိုင်တယ်။
+
+```js
+// Show an error when phone is empty
+```
+
+## 15.4 Small helper functions အတွက်အသုံးဝင်တယ်
+
+```text
+formatDate
+calculateRemainingSeats
+validateEmail
+normalizePhoneNumber
+```
+
+လို small helper functions တွေမှာကူညီနိုင်တယ်။
+
+---
+
+# 16. Level 1 ရဲ့ အားနည်းချက်များ
+
+## 16.1 Suggestion မှားနိုင်တယ်
+
+AI autocomplete ကခန့်မှန်းတာဖြစ်လို့ logic မှားနိုင်တယ်။
+
+ဥပမာ—
+
+```js
+return registeredCount - capacity;
+```
+
+လို reverse calculation suggest လုပ်နိုင်တယ်။
+
+## 16.2 Existing requirement မသိနိုင်
+
+SPEC မဖတ်ထားရင် AI က course decision နဲ့မကိုက်တဲ့ code suggest လုပ်နိုင်တယ်။
+
+ဥပမာ—
+
+```text
+MVP မှာ email notification မလုပ်သေး
+```
+
+ဒါပေမယ့် AI က email send code suggest လုပ်နိုင်တယ်။
+
+## 16.3 Too much code
+
+AI က သင်လိုချင်တာထက်ပိုရေးပေးနိုင်တယ်။
+
+```text
+simple validation လိုချင်တာ
+full form library import လုပ်ချင်လာတာ
+```
+
+## 16.4 Silent dependency risk
+
+AI suggestion ထဲမှာ install မထားတဲ့ package import ပါလာနိုင်တယ်။
+
+## 16.5 Learning ကိုအားနည်းစေနိုင်
+
+Beginner က suggestion ကို မဖတ်ဘဲ Tab နှိပ်တတ်သွားရင် code ကိုနားမလည်တော့ဘူး။
+
+Rule—
+
+```text
+Accept မလုပ်ခင် ဖတ်ပါ။
+Accept ပြီးရင် ပြန်ရှင်းပြနိုင်ရမယ်။
+```
+
+---
+
+# 17. Beginner Safety Rules for AI Autocomplete
+
+```text
+Rule 1 — Suggestion ကိုဖတ်ပြီးမှယူပါ။
+Rule 2 — Function body တစ်ခုလုံးယူရင် test case စဉ်းစားပါ။
+Rule 3 — Security-sensitive code ကိုမျက်စိမှိတ်မယူပါနဲ့။
+Rule 4 — Package import ပါလာရင် install ရှိ/မရှိစစ်ပါ။
+Rule 5 — console.log ထဲ PII မထည့်ပါနဲ့။
+Rule 6 — Large suggestion ကို small pieces ခွဲယူပါ။
+Rule 7 — Autocomplete ရေးပေးတာကို commit မလုပ်ခင် git diff စစ်ပါ။
+Rule 8 — Code ကိုနားမလည်ရင် AI Chat ကိုရှင်းခိုင်းပါ။
+```
+
+---
+
+# 18. Level 1 Lab — Autocomplete Simulation
+
+ဒီ lab မှာ AI autocomplete tool မရှိသေးလည်းလုပ်လို့ရအောင် **simulation lab** အဖြစ်လုပ်မယ်။ Tool ရှိသူက editor ထဲမှာ autocomplete suggestion ကိုစမ်းနိုင်တယ်။ Tool မရှိသူက suggestion ကို “AI ကပေးနိုင်တဲ့ code” အနေနဲ့ဖတ်ပြီး accept/reject/edit လေ့ကျင့်မယ်။
+
+## Lab Goal
+
+```text
+AI autocomplete suggestion ကို မျက်စိမှိတ်မယူဘဲ review → accept/edit → test လုပ်တတ်မယ်။
+```
+
+## Folder Structure
+
+```text
+agentic-zero-to-hero/
+└── playground/
+    └── chapter-8-ai-autocomplete/
+        ├── index.html
+        ├── style.css
+        └── app.js
+```
+
+---
+
+## Step 1 — Folder ဆောက်ပါ
+
+macOS/Linux/Git Bash—
+
+```bash
+cd ~/Desktop/agentic-zero-to-hero
+mkdir -p playground/chapter-8-ai-autocomplete
+cd playground/chapter-8-ai-autocomplete
+touch index.html style.css app.js
+```
+
+Windows PowerShell—
+
+```powershell
+cd ~/Desktop/agentic-zero-to-hero
+mkdir playground/chapter-8-ai-autocomplete
+cd playground/chapter-8-ai-autocomplete
+New-Item index.html
+New-Item style.css
+New-Item app.js
+```
+
+---
+
+## Step 2 — index.html Starter ရေးပါ
+
+```html
+<!DOCTYPE html>
+<html lang="my">
+  <head>
+    <meta charset="UTF-8">
+    <title>AI Autocomplete Practice</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+
+  <body>
+    <main class="page">
+      <section class="card">
+        <h1>AI Autocomplete Practice</h1>
+        <p>Event registration form validation ကို လေ့ကျင့်မည်။</p>
+
+        <form id="registration-form">
+          <label for="name">နာမည်</label>
+          <input id="name" name="name" type="text">
+
+          <label for="phone">ဖုန်းနံပါတ်</label>
+          <input id="phone" name="phone" type="tel">
+
+          <button type="submit">Register လုပ်မည်</button>
+        </form>
+
+        <p id="message" class="message"></p>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
+```
+
+---
+
+## Step 3 — style.css Starter ရေးပါ
+
+```css
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.card {
+  width: 100%;
+  max-width: 480px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 24px;
+}
+
+label {
+  display: block;
+  margin-top: 16px;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+input,
+button {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 16px;
+}
+
+input {
+  border: 1px solid #d1d5db;
+}
+
+button {
+  margin-top: 20px;
+  border: none;
+  background: #2563eb;
+  color: white;
+  font-weight: 700;
+}
+
+.message {
+  margin-top: 16px;
+  font-weight: 700;
+}
+
+.message.error {
+  color: #b91c1c;
+}
+
+.message.success {
+  color: #15803d;
+}
+```
+
+---
+
+## Step 4 — app.js မှာ Function Name ပဲရေးပါ
+
+```js
+function validateRegistrationForm(formData) {
+```
+
+ဒီနေရာမှာ AI autocomplete ရှိရင် suggestion ပေါ်လာနိုင်တယ်။
+
+AI မရှိသူအတွက် simulated suggestion—
+
+```js
+  if (!formData.name) {
+    return "နာမည်ဖြည့်ပါ။";
+  }
+
+  if (!formData.phone) {
+    return "ဖုန်းနံပါတ်ဖြည့်ပါ။";
+  }
+
+  return null;
+}
+```
+
+---
+
+## Step 5 — Suggestion ကို Review လုပ်ပါ
+
+အပေါ်က suggestion ကို အောက်ပါ checklist နဲ့စစ်ပါ။
+
+```text
+[ ] formData undefined ဖြစ်နိုင်လား
+[ ] name / phone string ဖြစ်မယ်လို့ assumption လုပ်ထားလား
+[ ] spaces only input ကိုစစ်ထားလား
+[ ] error messages မြန်မာလိုမှန်လား
+[ ] return null ကို calling code ကနားလည်မလား
+```
+
+ပြဿနာတစ်ခုရှိတယ်—
+
+```text
+"   " လို spaces only input ကို non-empty လို့ယူနိုင်တယ်။
+```
+
+ဒါကြောင့် suggestion ကိုပြင်မယ်။
+
+---
+
+## Step 6 — Edited Version ရေးပါ
+
+```js
+function validateRegistrationForm(formData) {
+  const name = formData.name.trim();
+  const phone = formData.phone.trim();
+
+  if (name === "") {
+    return "နာမည်ဖြည့်ပါ။";
+  }
+
+  if (phone === "") {
+    return "ဖုန်းနံပါတ်ဖြည့်ပါ။";
+  }
+
+  return null;
+}
+```
+
+ဒီနေရာက Level 1 skill ပါ။
+
+```text
+AI suggestion ကိုယူတယ်။
+ဒါပေမယ့် မျက်စိမှိတ်မယူဘဲ edit လုပ်တယ်။
+```
+
+---
+
+## Step 7 — Form Submit Logic ရေးပါ
+
+`app.js` ထဲကို အောက်ပါ code ထပ်ရေးပါ။
+
+```js
+const form = document.querySelector("#registration-form");
+const nameInput = document.querySelector("#name");
+const phoneInput = document.querySelector("#phone");
+const message = document.querySelector("#message");
+
+form.addEventListener("submit", function (event) {
+  event.preventDefault();
+
+  const formData = {
+    name: nameInput.value,
+    phone: phoneInput.value
+  };
+
+  const errorMessage = validateRegistrationForm(formData);
+
+  message.className = "message";
+
+  if (errorMessage) {
+    message.textContent = errorMessage;
+    message.classList.add("error");
+    return;
+  }
+
+  message.textContent = "Registration အောင်မြင်ပါသည်။";
+  message.classList.add("success");
+});
+```
+
+---
+
+## Step 8 — Browser မှာစမ်းပါ
+
+`index.html` ကို double-click လုပ်ပြီးစမ်းပါ။
+
+Test cases—
+
+```text
+1. Name empty, phone empty → “နာမည်ဖြည့်ပါ။”
+2. Name filled, phone empty → “ဖုန်းနံပါတ်ဖြည့်ပါ။”
+3. Name spaces only, phone filled → “နာမည်ဖြည့်ပါ။”
+4. Name + phone filled → success message
+```
+
+---
+
+## Step 9 — Git Commit လုပ်ပါ
+
+Project root ပြန်သွားပါ။
+
+```bash
+cd ~/Desktop/agentic-zero-to-hero
+git status
+git diff
+```
+
+အဆင်ပြေရင်—
+
+```bash
+git add playground/chapter-8-ai-autocomplete/
+git commit -m "add level 1 ai autocomplete practice"
+```
+
+---
+
+# 19. Lab Reflection
+
+Lab note ထဲမှာ ဒီလိုရေးပါ။
+
+```md
+# Chapter 8 Lab — AI Autocomplete
+
+## Suggestion I reviewed
+
+AI suggested a validation function that checked whether name and phone were empty.
+
+## Problem I found
+
+The original suggestion did not trim spaces.
+A value like "   " could pass as non-empty.
+
+## My edit
+
+I added trim() before checking empty strings.
+
+## Lesson
+
+AI autocomplete can be helpful, but I must review and improve the suggestion before accepting it.
+```
+
+---
+
+# 20. Copy-paste Prompts
+
+## 20.1 Autocomplete Suggestion Review Prompt
+
+```text
+AI autocomplete က အောက်ပါ code ကို suggest လုပ်ပါတယ်။
+Code မပြင်ခင် review လုပ်ပါ။
+
+စစ်ရန်:
+- Logic မှန်လား
+- Edge cases ရှိလား
+- Security/privacy risk ရှိလား
+- Existing project requirement နဲ့ကိုက်လား
+- Simpler version ရှိလား
+- Test cases ဘာလိုမလဲ
+
+Code:
+[paste suggestion]
+```
+
+## 20.2 Explain Suggestion Prompt
+
+```text
+အောက်ပါ AI autocomplete suggestion ကို beginner နားလည်အောင်ရှင်းပြပါ။
+
+ရှင်းပြရန်:
+- Code ကဘာလုပ်တာလဲ
+- Input ဘာလဲ
+- Output ဘာလဲ
+- Assumptions ဘာရှိလဲ
+- Bug ဖြစ်နိုင်တဲ့ edge cases ဘာရှိလဲ
+
+Code:
+[paste suggestion]
+```
+
+## 20.3 Improve Suggestion Prompt
+
+```text
+AI autocomplete suggestion ကိုပိုကောင်းအောင်ပြင်ချင်ပါတယ်။
+
+Original code:
+[paste code]
+
+Goal:
+[goal]
+
+စည်းကမ်း:
+- Minimal change ပဲလုပ်ပါ
+- Function name မပြောင်းပါနဲ့
+- Beginner-friendly explanation ပေးပါ
+- Test cases ၃ ခုရေးပါ
+```
+
+## 20.4 Comment-to-Code Prompt
+
+```text
+အောက်ပါ comment ကို code အဖြစ်ပြောင်းမယ်ဆိုရင် ဘယ်လိုရေးသင့်လဲရှင်းပြပါ။
+Full code မရေးခင် pseudo-code ပေးပါ။
+
+Comment:
+[paste comment]
+```
+
+## 20.5 Autocomplete Safety Prompt
+
+```text
+အောက်ပါ AI autocomplete suggestion ကို accept လုပ်သင့်/မလုပ်သင့် ဆုံးဖြတ်ပေးပါ။
+
+Project context:
+[paste context]
+
+Suggestion:
+[paste suggestion]
+
+စစ်ရန်:
+- scope နဲ့ကိုက်လား
+- package import အသစ်ပါလား
+- secret/PII logging ပါလား
+- test လုပ်ရမယ့် cases ဘာလဲ
+- accept / edit / reject recommendation ပေးပါ
+```
+
+---
+
+# 21. Expected Output
+
+ဒီအခန်းပြီးရင် learner က အောက်ပါ summary ကိုရေးနိုင်ရမယ်။
+
+```md
+# Level 1 — AI Autocomplete Summary
+
+## Definition
+AI Autocomplete ဆိုတာ editor ထဲမှာ code ရေးနေစဉ် AI က next line/block ကို inline suggestion အဖြစ်ပေးတဲ့အဆင့်ဖြစ်တယ်။
+
+## Difference from Level 0
+Level 0 မှာ ChatGPT က code block ပေးပြီး user က copy-paste လုပ်တယ်။
+Level 1 မှာ user က editor ထဲမှာရေးနေစဉ် AI က suggestion ပေးတယ်။
+
+## Good For
+- Repetitive code
+- Small helper functions
+- HTML/CSS patterns
+- Test skeletons
+- Comment-to-code suggestions
+
+## Risks
+- Logic မှားနိုင်
+- Edge case မစစ်နိုင်
+- Package import မလိုဘဲပါနိုင်
+- Security/privacy issue ပါနိုင်
+- Beginner ကနားမလည်ဘဲ accept လုပ်မိနိုင်
+
+## Rule
+Suggestion ကို accept မလုပ်ခင် ဖတ်ပြီးနားလည်ရမယ်။
+Accept ပြီးရင် test လုပ်ရမယ်။
+```
+
+---
+
+# 22. Common Errors
+
+## Error 1 — Suggestion ကို မဖတ်ဘဲ Tab နှိပ်ခြင်း
+
+ပြဿနာ—
+
+```text
+မှားတဲ့ logic ကို codebase ထဲထည့်မိနိုင်တယ်။
+```
+
+ပြင်နည်း—
+
+```text
+Suggestion ကိုဖတ်ပါ။
+လိုအပ်ရင် edit လုပ်ပါ။
+နားမလည်ရင် AI Chat ကိုရှင်းခိုင်းပါ။
+```
+
+---
+
+## Error 2 — Edge cases မစစ်ခြင်း
+
+ဥပမာ AI က—
+
+```js
+if (!formData.name) {
+```
+
+လို့ suggest လုပ်တယ်။ ဒါပေမယ့် `"   "` spaces only ကိုစစ်မထားနိုင်ဘူး။
+
+ပြင်နည်း—
+
+```js
+const name = formData.name.trim();
+
+if (name === "") {
+```
+
+---
+
+## Error 3 — Import မရှိတဲ့ package ကိုသုံးမိခြင်း
+
+AI suggestion—
+
+```js
+import dayjs from "dayjs";
+```
+
+Package install မရှိရင် build error ဖြစ်မယ်။
+
+စစ်ရန်—
+
+```text
+package.json dependencies ထဲ dayjs ပါလား?
+တကယ်လိုလား?
+```
+
+---
+
+## Error 4 — PII ကို log ထဲထည့်ခြင်း
+
+AI suggestion—
+
+```js
+console.log(attendee);
+```
+
+Attendee object ထဲမှာ name, phone, email ပါနိုင်တယ်။
+
+ပြင်နည်း—
+
+```text
+Production code မှာ PII မ log ပါနဲ့။
+Debug လိုရင် masked/safe summary သုံးပါ။
+```
+
+---
+
+## Error 5 — Requirement နဲ့မကိုက်တဲ့ suggestion
+
+Course decision အရ notification MVP ထဲမပါဘူး။ ဒါပေမယ့် AI က—
+
+```js
+sendEmailConfirmation(attendee.email);
+```
+
+လို suggest လုပ်နိုင်တယ်။
+
+ပြင်နည်း—
+
+```text
+COURSE_DECISIONS.md / SPEC.md နဲ့စစ်ပါ။
+MVP scope မကိုက်ရင် reject လုပ်ပါ။
+```
+
+---
+
+## Error 6 — Autocomplete ကို Agent လို့ထင်ခြင်း
+
+AI autocomplete က project ကို plan/run/test မလုပ်နိုင်သေးဘူး။
+
+ပြင်နည်း—
+
+```text
+Autocomplete = typing assistant
+Coding Agent = project assistant
+```
+
+လို့ခွဲမှတ်ပါ။
+
+---
+
+# 23. Debug / Recovery
+
+## 23.1 Suggestion ယူပြီး bug ဖြစ်ရင်
+
+စစ်ရန်—
+
+```text
+[ ] ဘယ် suggestion ကို accept လုပ်ခဲ့လဲ
+[ ] git diff မှာ ဘာပြောင်းလဲ
+[ ] function logic မှန်လား
+[ ] edge case ရှိလား
+[ ] console/test error ဘာပြောလဲ
+```
+
+Prompt—
+
+```text
+AI autocomplete suggestion ကို accept လုပ်ပြီး bug ဖြစ်သွားပါတယ်။
+
+Expected:
+[expected]
+
+Actual:
+[actual]
+
+Changed code:
+[paste code]
+
+စစ်ရန်:
+- suggestion ရဲ့ assumption ဘာလဲ
+- bug ဖြစ်နိုင်တဲ့ line ဘယ်ဟာလဲ
+- minimal fix ဘာလဲ
+- test cases ဘာလိုလဲ
+```
+
+---
+
+## 23.2 Suggestion က အရမ်းရှည်နေရင်
+
+လုပ်ရန်—
+
+```text
+Full block မယူပါနဲ့။
+Line တစ်ကြောင်းချင်းစီယူပါ။
+```
+
+Prompt—
+
+```text
+ဒီ AI suggestion က အရမ်းရှည်ပါတယ်။
+Small steps အဖြစ်ခွဲပေးပါ။
+ဘယ်အပိုင်းကို အရင် accept လုပ်သင့်လဲပြောပါ။
+```
+
+---
+
+## 23.3 Suggestion နားမလည်ရင်
+
+Prompt—
+
+```text
+ဒီ autocomplete suggestion ကို beginner နားလည်အောင်ရှင်းပြပါ။
+Code မပြင်ပါနဲ့။
+
+အထူးသဖြင့်:
+- Function ကဘာလုပ်တာလဲ
+- Input/output ဘာလဲ
+- ဘယ် edge cases ရှိလဲ
+- Simpler version ရှိလား
+```
+
+---
+
+## 23.4 Suggestion ကြောင့် file ပျက်သွားရင်
+
+Git သုံးပါ။
+
+```bash
+git status
+git diff
+```
+
+Specific file rollback—
+
+```bash
+git restore path/to/file
+```
+
+Run မလုပ်ခင် Agent ကိုမေးပါ—
+
+```text
+ဒီ diff ကိုကြည့်ပြီး AI autocomplete ကြောင့်ပျက်သွားတဲ့ change ကိုရှာပါ။
+Rollback command မ run ခင် explanation ပေးပါ။
+```
+
+---
+
+# 24. Verification Checklist
+
+ဒီအခန်းကို နားလည်ပြီလား စစ်ပါ။
+
+```text
+[ ] Level 1: AI Autocomplete ဆိုတာ editor ထဲက inline suggestion ဖြစ်ကြောင်းသိတယ်
+[ ] Level 0 နဲ့ Level 1 ကွာခြားချက်ရှင်းပြနိုင်တယ်
+[ ] IntelliSense, snippet, AI autocomplete ကိုခွဲနိုင်တယ်
+[ ] Ghost text ဆိုတာဘာလဲသိတယ်
+[ ] Suggestion ကို accept / ignore / edit လုပ်နိုင်ကြောင်းနားလည်တယ်
+[ ] AI suggestion ကို မျက်စိမှိတ်မယူရကြောင်းသိတယ်
+[ ] Autocomplete-friendly function/variable/comment ရေးနိုင်တယ်
+[ ] HTML/CSS/JS suggestions ကို review လုပ်နိုင်တယ်
+[ ] Edge case စစ်ရမယ်ဆိုတာနားလည်တယ်
+[ ] Package import suggestion ကိုစစ်ရမယ်ဆိုတာသိတယ်
+[ ] PII logging ကိုသတိထားရမယ်ဆိုတာသိတယ်
+[ ] Git diff review လုပ်ရမယ်ဆိုတာသိတယ်
+[ ] Level 1 က real project automation မလုပ်နိုင်သေးကြောင်းနားလည်တယ်
+```
+
+---
+
+# 25. Mini Assignment
+
+## Assignment 1 — Level 1 Definition ရေးပါ
+
+ကိုယ်ပိုင်စကားနဲ့ရေးပါ။
+
+```text
+Level 1: AI Autocomplete ဆိုတာ...
+```
+
+ပါရမယ့်အချက်—
+
+```text
+- Editor ထဲမှာရေးနေစဉ် AI suggestion ပေးတယ်
+- User က accept/ignore/edit လုပ်တယ်
+- AI က terminal/test/build မလုပ်သေးဘူး
+- User က driver ဖြစ်တယ်
+```
+
+---
+
+## Assignment 2 — Autocomplete Suggestion Review
+
+အောက်ပါ suggestion ကို review လုပ်ပါ။
+
+```js
+function validateRegistrationForm(formData) {
+  if (!formData.name) {
+    return "နာမည်ဖြည့်ပါ။";
+  }
+
+  if (!formData.phone) {
+    return "ဖုန်းနံပါတ်ဖြည့်ပါ။";
+  }
+
+  return null;
+}
+```
+
+စစ်ရန်—
+
+```text
+[ ] ဘာလုပ်တာလဲ
+[ ] ဘာ edge case မစစ်ထားလဲ
+[ ] ဘယ်လိုပိုကောင်းအောင်ပြင်မလဲ
+[ ] Test cases ၃ ခုရေးပါ
+```
+
+---
+
+## Assignment 3 — Autocomplete-Friendly Comment ရေးပါ
+
+အောက်ပါ goal အတွက် AI autocomplete-friendly comment ၃ ခုရေးပါ။
+
+Goal—
+
+```text
+Phone number မဖြည့်ထားရင် error message ပြချင်တယ်။
+```
+
+Example—
+
+```js
+// Return an error message when the phone number is empty
+```
+
+---
+
+## Assignment 4 — Accept / Edit / Reject ဆုံးဖြတ်ပါ
+
+အောက်ပါ suggestions ကို Accept / Edit / Reject ခွဲပါ။
+
+```js
+console.log(attendee);
+```
+
+```js
+return event.capacity - event.registeredCount;
+```
+
+```js
+import emailService from "some-email-package";
+sendEmailConfirmation(attendee.email);
+```
+
+```js
+const name = formData.name.trim();
+```
+
+Expected reasoning—
+
+```text
+console.log(attendee) → Reject/Edit, PII risk
+capacity - registeredCount → Accept if variables correct
+email package → Reject for MVP notification scope
+trim → Accept/Edit, useful for validation
+```
+
+---
+
+## Assignment 5 — Level 0 vs Level 1 Table ရေးပါ
+
+Columns—
+
+```text
+Capability
+Level 0 ChatGPT Code Example
+Level 1 AI Autocomplete
+```
+
+Rows—
+
+```text
+Where it works
+Output type
+User action
+Best use
+Main risk
+Can run tests?
+Can edit project files automatically?
+```
+
+---
+
+## Assignment 6 — Agent Prompt ရေးပါ
+
+AI autocomplete suggestion ကို review ခိုင်းမယ့် prompt ရေးပါ။
+
+ပါရမယ့်အချက်—
+
+```text
+- Suggestion code
+- Project context
+- Requirement
+- Edge cases
+- Security/privacy risk
+- Accept/Edit/Reject recommendation
+```
+
+---
+
+# 26. Chapter Summary
+
+ဒီအခန်းမှာ **Level 1 — AI Autocomplete** ကိုလေ့လာခဲ့တယ်။
+
+အရေးကြီးဆုံး mental model—
+
+```text
+AI Autocomplete = Editor ထဲမှာ code ရေးနေစဉ် AI က next line/block ကို suggest လုပ်တာ
+```
+
+Level 0 နဲ့ကွာခြားချက်—
+
+```text
+Level 0:
+ChatGPT က code block ပေးပြီး user က copy-paste လုပ်တယ်။
+
+Level 1:
+User က editor ထဲမှာရေးနေပြီး AI က inline suggestion ပေးတယ်။
+```
+
+Level 1 ကိုအသုံးဝင်တဲ့နေရာ—
+
+```text
+Repetitive code
+Small helper functions
+HTML/CSS patterns
+Test skeletons
+Comment-to-code
+```
+
+Level 1 ရဲ့အန္တရာယ်—
+
+```text
+Logic မှားနိုင်
+Edge cases မစစ်နိုင်
+Package import မလိုဘဲပါနိုင်
+PII logging ပါနိုင်
+Requirement နဲ့မကိုက်နိုင်
+```
+
+အရေးကြီးဆုံး rule—
+
+```text
+AI suggestion ကို accept မလုပ်ခင် ဖတ်ပါ။
+Accept ပြီးရင် edit/test/review လုပ်ပါ။
+```
+

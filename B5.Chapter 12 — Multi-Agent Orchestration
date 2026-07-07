@@ -1,0 +1,2087 @@
+# Chapter 12 — Level 5: Multi-Agent Orchestration
+
+## 1. Learning Objectives
+
+ဒီအခန်းပြီးသွားရင် သင်က အောက်ပါအရာတွေကို နားလည်ရပါမယ်။
+
+```text
+[ ] Level 5: Multi-Agent Orchestration ဆိုတာဘာလဲ ရှင်းပြနိုင်မယ်
+[ ] Level 4 Coding Agent နဲ့ Level 5 Multi-Agent Workflow ကွာခြားချက်သိမယ်
+[ ] Planner, SPEC Maintainer, Developer, Verifier, Auditor, Deployer role တွေကိုခွဲနိုင်မယ်
+[ ] Subagent ဆိုတာဘာလဲ နားလည်မယ်
+[ ] Coordinator Agent ရဲ့တာဝန်ကိုနားလည်မယ်
+[ ] Agent တစ်ယောက်တည်းကို အကုန်ခိုင်းတာထက် role ခွဲခိုင်းတာ ဘာကြောင့်ပိုကောင်းလဲ သိမယ်
+[ ] Multi-agent workflow ထဲမှာ context pollution, scope creep, cost, duplicated work, conflicting changes risks တွေကိုနားလည်မယ်
+[ ] Safe multi-agent prompt တစ်ခုရေးနိုင်မယ်
+[ ] Verifier / Auditor ကို implementation agent နဲ့သီးခြားထားရမယ့်အကြောင်းနားလည်မယ်
+[ ] Level 5 မှာလည်း human approval gate မဖြစ်မနေလိုကြောင်းနားလည်မယ်
+```
+
+ဒီအခန်းက Part 2 ရဲ့နောက်ဆုံးအခန်းပါ။ Level 0 က ChatGPT code example, Level 1 က AI autocomplete, Level 2 က editor agent, Level 3 က CLI agent, Level 4 က feature-level coding agent ဖြစ်ခဲ့တယ်။ Level 5 မှာတော့ **Agent တစ်ယောက်တည်းမဟုတ်တော့ဘဲ Agent အများကြီးကို role ခွဲပြီး စနစ်တကျအလုပ်လုပ်စေခြင်း** ကိုလေ့လာမယ်။
+
+Current Claude Code docs မှာ subagents တွေကို task-specific workflow နဲ့ context management အတွက်သုံးနိုင်တဲ့ specialized AI assistants လို့ဖော်ပြထားပြီး subagent တစ်ခုချင်းစီက own context window, custom system prompt, tool access, independent permissions နဲ့အလုပ်လုပ်နိုင်တယ်လို့ရှင်းပြထားပါတယ်။ Codex docs မှာလည်း subagent workflows က specialized agents တွေကို parallel spawn လုပ်ပြီး result တွေကို စုစည်းပြန်ပေးနိုင်ကြောင်း၊ complex and parallel tasks အတွက်အသုံးဝင်နိုင်ကြောင်းဖော်ပြထားပါတယ်။ ([Claude][1])
+
+---
+
+## 2. Beginner Explanation
+
+Level 4 Coding Agent ကို junior developer တစ်ယောက်လိုစဉ်းစားပါ။ Feature တစ်ခုကို plan ဆွဲ၊ code ရေး၊ test/build စစ်၊ summary ပေးနိုင်တယ်။
+
+Level 5 Multi-Agent Orchestration ကိုတော့ software team တစ်ခုလိုစဉ်းစားပါ။
+
+```text
+Product Planner       → ဘာလုပ်မလဲ ခွဲမယ်
+SPEC Maintainer       → Requirement / acceptance criteria ရေးမယ်
+Frontend Developer    → UI ဆောက်မယ်
+Backend Developer     → API ဆောက်မယ်
+PWA Developer         → check-in app ဆောက်မယ်
+Test Engineer         → tests ရေး/run မယ်
+Verifier              → acceptance criteria pass/fail စစ်မယ်
+Auditor               → security/privacy/quality စစ်မယ်
+Deployer              → deployment plan/runbook ပြင်မယ်
+Coordinator           → အားလုံးကို ချိတ်ဆက်စီမံမယ်
+```
+
+ဒီ flow ကို diagram နဲ့ကြည့်ရင်—
+
+```text
+Human Goal
+   ↓
+Coordinator Agent
+   ↓
+Planner Agent
+   ↓
+SPEC Maintainer
+   ↓
+Developer Agents
+   ↓
+Test Engineer
+   ↓
+Verifier
+   ↓
+Auditor
+   ↓
+Human Approval
+   ↓
+Commit / Deploy
+```
+
+Level 5 မှာ AI agent တစ်ယောက်တည်းကို “အကုန်လုပ်” လို့မခိုင်းတော့ဘူး။ Role ခွဲပြီး အလုပ်ခွဲခိုင်းတယ်။
+
+ဒါက real software team ပုံစံနဲ့တူတယ်။
+
+```text
+တစ်ယောက်တည်း developer က code ရေးပြီး ကိုယ့်ကိုယ်ကို approve လုပ်တာထက်
+developer ရေးပြီး reviewer/tester/auditor က ပြန်စစ်တာ ပိုလုံခြုံတယ်။
+```
+
+---
+
+# 3. Level 5 ဆိုတာဘာလဲ
+
+Level 5: Multi-Agent Orchestration ဆိုတာ—
+
+```text
+Specialized agents အများကြီးကို role ခွဲပြီး workflow တစ်ခုအနေနဲ့ စီမံခိုင်းခြင်း
+```
+
+ပါ။
+
+Level 5 မှာ Agent system က—
+
+```text
+[✓] task ကို subtask တွေအဖြစ်ခွဲနိုင်တယ်
+[✓] subtask တစ်ခုချင်းစီကို role-specific agent ဆီပို့နိုင်တယ်
+[✓] parallel research / review လုပ်နိုင်တယ်
+[✓] implementation agent နဲ့ verification agent ကိုခွဲနိုင်တယ်
+[✓] context ကို main conversation ထဲမပွအောင်ခွဲထားနိုင်တယ်
+[✓] role-specific tools / permissions သတ်မှတ်နိုင်တယ်
+[✓] final consolidated summary ပေးနိုင်တယ်
+```
+
+ဒါပေမယ့် Level 5 က “AI team အားလုံးကိုလွှတ်လိုက်၊ project ပြီးသွားမယ်” မဟုတ်ပါဘူး။
+
+Level 5 မှာလည်း human က—
+
+```text
+[ ] Product goal ကိုဆုံးဖြတ်ရမယ်
+[ ] Scope ကို approve လုပ်ရမယ်
+[ ] Agent plan ကို review လုပ်ရမယ်
+[ ] Conflicting recommendations ကိုဆုံးဖြတ်ရမယ်
+[ ] Security/privacy risk ကိုအတည်ပြုရမယ်
+[ ] Production deploy ကို approve လုပ်ရမယ်
+```
+
+Level 5 ကို အလွယ်ဆုံးမှတ်ရန်—
+
+```text
+Level 4 = One capable coding agent
+Level 5 = Coordinated team of specialized agents
+```
+
+---
+
+# 4. Level 4 vs Level 5
+
+| အချက်          | Level 4: Coding Agent           | Level 5: Multi-Agent Orchestration               |
+| -------------- | ------------------------------- | ------------------------------------------------ |
+| Agent count    | Agent တစ်ယောက်                  | Agent အများကြီး                                  |
+| Main job       | Feature တစ်ခု implement         | SDLC workflow တစ်ခုစီမံ                          |
+| Planning       | Coding agent က plan ဆွဲ         | Planner / SPEC Maintainer သီးခြား                |
+| Implementation | Same agent implement            | Frontend/Backend/PWA agents ခွဲ                  |
+| Testing        | Same agent သို့မဟုတ် user စစ်   | Test Engineer / Verifier သီးခြား                 |
+| Review         | Human + agent summary           | Verifier/Auditor role ခွဲစစ်                     |
+| Context        | Single conversation ပွနိုင်     | Subagent contexts ခွဲနိုင်                       |
+| Risk           | scope creep / weak verification | coordination overhead / conflicting outputs      |
+| Best use       | Small/medium feature            | Full-stack feature, large repo, release workflow |
+| Human role     | Product owner + reviewer        | Orchestrator + final decision maker              |
+
+Level 4 မှာ Coding Agent တစ်ယောက်က feature တစ်ခုကိုလုပ်တယ်။ Level 5 မှာ Agent team တစ်ခုက feature lifecycle တစ်ခုကိုလုပ်တယ်။
+
+---
+
+# 5. Subagent ဆိုတာဘာလဲ
+
+Subagent ဆိုတာ main agent အစား task အမျိုးအစားတစ်ခုကို အထူးပြုလုပ်ဖို့ ဖန်တီးထားတဲ့ agent ပါ။
+
+ဥပမာ—
+
+```text
+code-reviewer
+test-engineer
+security-auditor
+spec-maintainer
+frontend-developer
+backend-developer
+deployer
+```
+
+Claude Code docs အရ subagents တွေက main conversation context ကိုမပွစေဘဲ exploration, implementation, logs, search results စတာတွေကို သီးခြား context ထဲမှာလုပ်ပြီး summary ကိုပဲ main conversation ဆီပြန်ပေးနိုင်တယ်။ Tools ကန့်သတ်ခြင်း၊ project/user level reuse, focused system prompt သတ်မှတ်ခြင်း၊ model/cost routing စတာတွေအတွက်လည်းအသုံးဝင်တယ်လို့ docs မှာဖော်ပြထားပါတယ်။ ([Claude][1])
+
+Beginner mental model—
+
+```text
+Main Agent = Project manager / coordinator
+Subagent   = Specialist worker
+```
+
+Subagent တစ်ယောက်ကို role နဲ့သတ်မှတ်တယ်။
+
+```text
+Verifier:
+Code မရေးဘူး။
+Acceptance criteria pass/fail စစ်တယ်။
+
+Auditor:
+Code မရေးဘူး။
+Security/privacy/quality risk စစ်တယ်။
+
+Frontend Developer:
+Frontend files ပြင်တယ်။
+Backend/database မပြင်ဘူး။
+```
+
+---
+
+# 6. Coordinator Agent ဆိုတာဘာလဲ
+
+Coordinator Agent ဆိုတာ subagents တွေကိုခိုင်းပြီး result တွေစုစည်းပေးတဲ့ main agent ပါ။
+
+Coordinator ရဲ့တာဝန်—
+
+```text
+1. User goal ကိုနားလည်
+2. Task ကို subtasks ခွဲ
+3. ဘယ် subagent ကိုသုံးမလဲဆုံးဖြတ်
+4. Subagent တစ်ယောက်ချင်းစီကို scope ပေး
+5. Result တွေပြန်စု
+6. Conflicts ရှိရင်ဖော်ပြ
+7. Final recommendation ပေး
+8. Human approval တောင်း
+```
+
+Coordinator ကို code အကုန်ရေးခိုင်းတာမဟုတ်ပါဘူး။ Coordinator က “လူခွဲခိုင်းသူ” ပါ။
+
+ကောင်းတဲ့ Coordinator prompt—
+
+```text
+မင်းက Coordinator Agent ဖြစ်တယ်။
+Code မရေးသေးပါနဲ့။
+
+Task ကို subagents အလိုက်ခွဲပါ။
+ဘယ် agent က ဘာလုပ်မလဲ၊ ဘာ files ထိမလဲ၊ ဘာ output ပြန်ပေးမလဲရေးပါ။
+Human approval မရခင် implementation မလုပ်ပါနဲ့။
+```
+
+---
+
+# 7. Multi-Agent Role များ
+
+ဒီ course ရဲ့ Level 5 မှာ အောက်ပါ role တွေကိုသုံးမယ်။
+
+---
+
+## 7.1 Planner Agent
+
+Planner Agent က “ဘာလုပ်မလဲ” ကိုခွဲတယ်။
+
+တာဝန်—
+
+```text
+- Goal ကို task breakdown လုပ်
+- Scope / non-goals ခွဲ
+- Dependency order ဆုံးဖြတ်
+- Risk areas ဖော်ပြ
+- Implementation sequence အကြံပြု
+```
+
+Planner Agent မလုပ်ရ—
+
+```text
+- Product code မရေးရ
+- Deployment မလုပ်ရ
+- Database မပြောင်းရ
+```
+
+Example prompt—
+
+```text
+Use planner role.
+
+Event registration feature ကို frontend, backend, database, tests, verification subtasks အဖြစ်ခွဲပါ။
+Code မရေးပါနဲ့။
+```
+
+---
+
+## 7.2 SPEC Maintainer Agent
+
+SPEC Maintainer က `SPEC.md` ကို single source of truth ဖြစ်အောင်ထိန်းတယ်။
+
+တာဝန်—
+
+```text
+- Requirement ကိုတိတိကျကျရေး
+- Acceptance criteria ရေး
+- API contract update
+- Data model impact ရေး
+- Non-goals မှတ်
+- Requirement contradiction ရှာ
+```
+
+မလုပ်ရ—
+
+```text
+- Product code မရေးရ
+- Tests မရေးရ
+- Deployment မလုပ်ရ
+```
+
+Example prompt—
+
+```text
+Use spec-maintainer.
+
+Registration History feature အတွက် SPEC section ရေးပါ။
+Implementation code မရေးပါနဲ့။
+Acceptance criteria, non-goals, verification ထည့်ပါ။
+```
+
+---
+
+## 7.3 Frontend Developer Agent
+
+Frontend Developer က user-facing web UI ကိုဆောက်တယ်။
+
+တာဝန်—
+
+```text
+- React/HTML UI
+- Forms
+- Loading/error/empty states
+- Responsive design
+- Accessibility basics
+- Myanmar localization
+```
+
+မလုပ်ရ—
+
+```text
+- Backend API code မပြင်ရ
+- Database migration မလုပ်ရ
+- Deployment config မပြင်ရ
+```
+
+Example prompt—
+
+```text
+Use frontend-developer.
+
+SPEC.md ထဲက Event List section ကိုဖတ်ပါ။
+Public event list page UI ဆောက်ပါ။
+Backend API မချိတ်သေးပါ၊ mock data သုံးပါ။
+```
+
+---
+
+## 7.4 Backend Developer Agent
+
+Backend Developer က API နဲ့ server-side logic ကိုဆောက်တယ်။
+
+တာဝန်—
+
+```text
+- API endpoints
+- Input validation
+- Business logic
+- Database query integration
+- Error response format
+- Backend tests
+```
+
+မလုပ်ရ—
+
+```text
+- Frontend UI မပြင်ရ
+- Admin table design မပြင်ရ
+- Secret values မဖော်ပြရ
+```
+
+Example prompt—
+
+```text
+Use backend-developer.
+
+POST /api/events/:id/register endpoint အတွက် implementation plan ပေးပါ။
+Validation, duplicate prevention, ticket code generation, tests ပါရမယ်။
+Code မပြင်ခင် plan ပေးပါ။
+```
+
+---
+
+## 7.5 PWA Developer Agent
+
+PWA Developer က staff check-in app ကိုဆောက်တယ်။
+
+တာဝန်—
+
+```text
+- PWA check-in screens
+- Mobile-friendly UX
+- Offline queue
+- Sync status
+- IndexedDB/localStorage strategy
+- Service worker integration, later chapter
+```
+
+မလုပ်ရ—
+
+```text
+- Native app store setup မလုပ်ရ
+- Backend schema မပြောင်းရ, unless approved
+- Admin dashboard မပြင်ရ
+```
+
+Example prompt—
+
+```text
+Use pwa-developer.
+
+Staff check-in PWA အတွက် attendee search screen plan ပေးပါ။
+Offline queue impact ကိုဖော်ပြပါ။
+Code မပြင်သေးပါ။
+```
+
+---
+
+## 7.6 Admin Developer Agent
+
+Admin Developer က organizer/admin dashboard ကိုဆောက်တယ်။
+
+တာဝန်—
+
+```text
+- Admin dashboard shell
+- Tables
+- CRUD forms
+- Search/filter/pagination
+- Empty/loading/error states
+- Role-aware UI
+```
+
+မလုပ်ရ—
+
+```text
+- Public website route မပြင်ရ
+- Backend auth logic မပြင်ရ, unless approved
+```
+
+Example prompt—
+
+```text
+Use admin-developer.
+
+Admin attendee list page ကို table + search + pagination plan နဲ့ဆောက်ပါ။
+Backend API မပြီးသေးရင် mock adapter သုံးပါ။
+```
+
+---
+
+## 7.7 Test Engineer Agent
+
+Test Engineer က tests ရေး/run/diagnose လုပ်တယ်။
+
+တာဝန်—
+
+```text
+- Unit tests
+- Integration tests
+- E2E test plan
+- Regression tests
+- Test failure diagnosis
+```
+
+မလုပ်ရ—
+
+```text
+- Product behavior ကို tests pass အောင်လိုသလိုမပြောင်းရ
+- Weak tests မရေးရ
+```
+
+Example prompt—
+
+```text
+Use test-engineer.
+
+Registration validation logic အတွက် tests ရေးပါ။
+Test fail ဖြစ်ရင် product bug လား test bug လားခွဲရှင်းပါ။
+```
+
+---
+
+## 7.8 Verifier Agent
+
+Verifier က feature က SPEC acceptance criteria ကိုက်လား pass/fail စစ်တယ်။
+
+တာဝန်—
+
+```text
+- SPEC.md section ဖတ်
+- Acceptance criteria တစ်ခုချင်းစီစစ်
+- Tests/build/manual evidence ကြည့်
+- PASS/FAIL table ထုတ်
+- Failing criteria အတွက် reproduce steps ပေး
+```
+
+မလုပ်ရ—
+
+```text
+- Product code မပြင်ရ
+- Tests ကို weaken မလုပ်ရ
+- Silent fix မလုပ်ရ
+```
+
+Example prompt—
+
+```text
+Use verifier.
+
+Registration History feature ကို SPEC acceptance criteria အတိုင်းစစ်ပါ။
+Code မပြင်ပါနဲ့။
+PASS/FAIL table ပေးပါ။
+```
+
+Verifier က Level 5 မှာ အလွန်အရေးကြီးတယ်။ Implementation agent ကရေးထားတဲ့ code ကို implementation agent ကိုယ်တိုင်ပဲ “pass” လို့ဆုံးဖြတ်တာထက် independent verifier ကစစ်တာပိုကောင်းတယ်။
+
+---
+
+## 7.9 Auditor Agent
+
+Auditor က quality/security/privacy/maintainability risk ကိုစစ်တယ်။
+
+တာဝန်—
+
+```text
+- Security risk
+- PII exposure
+- Secret handling
+- Input validation
+- Authorization gaps
+- Logging risk
+- Dependency risk
+- Maintainability
+- Performance risk
+```
+
+မလုပ်ရ—
+
+```text
+- Code မပြင်ရ
+- Secret value မဖော်ပြရ
+- Production deploy မလုပ်ရ
+```
+
+Example prompt—
+
+```text
+Use auditor.
+
+Registration and attendee management flow ကို audit လုပ်ပါ။
+အထူးသဖြင့် phone/email PII, admin access, logging, rate limiting risk စစ်ပါ။
+Code မပြင်ပါနဲ့။
+```
+
+---
+
+## 7.10 Deployer Agent
+
+Deployer က deployment plan, environment variables, smoke test, rollback plan ကိုစီမံတယ်။
+
+တာဝန်—
+
+```text
+- Deployment checklist
+- Environment variable checklist
+- DigitalOcean app spec draft
+- Staging deploy plan
+- Smoke test plan
+- Rollback plan
+- Deployment notes
+```
+
+မလုပ်ရ—
+
+```text
+- Production deploy မလုပ်ရ, explicit approval မရှိဘဲ
+- Secret values မဖော်ပြရ
+- App delete/scale/change မလုပ်ရ, approval မရှိဘဲ
+```
+
+Example prompt—
+
+```text
+Use deployer.
+
+DigitalOcean App Platform staging deploy plan ပေးပါ။
+Production deploy မလုပ်ပါနဲ့။
+Secret values မဖော်ပြပါနဲ့။
+```
+
+---
+
+# 8. Multi-Agent Workflow Pattern
+
+Level 5 workflow ကို အဆင့်လိုက်သွားမယ်။
+
+```text
+1. Human gives goal
+2. Coordinator breaks down work
+3. Planner creates task sequence
+4. SPEC Maintainer updates requirements
+5. Developer agents implement scoped parts
+6. Test Engineer writes/runs tests
+7. Verifier checks acceptance criteria
+8. Auditor checks risk
+9. Coordinator consolidates results
+10. Human approves commit/deploy
+```
+
+Diagram—
+
+```text
+Human
+  ↓
+Coordinator
+  ↓
+Planner ──→ SPEC Maintainer
+  ↓
+Developer Agents
+  ├── Frontend Developer
+  ├── Backend Developer
+  ├── PWA Developer
+  └── Admin Developer
+  ↓
+Test Engineer
+  ↓
+Verifier
+  ↓
+Auditor
+  ↓
+Coordinator Summary
+  ↓
+Human Decision
+```
+
+Codex docs မှာ subagent workflow တွေမှာ Codex က agents spawn, follow-up instructions route, results wait, agent threads close လုပ်ပြီး agent အများကြီး run ဖြစ်တဲ့အခါ result တွေစုစည်းပြန်ပေးနိုင်တယ်လို့ဖော်ပြထားပါတယ်။ ဒါပေမယ့် Codex က subagent အသစ်ကို user က explicitly ask လုပ်မှ spawn လုပ်ကြောင်း၊ subagent workflow တွေက comparable single-agent runs ထက် token ပိုသုံးနိုင်ကြောင်းလည်း docs မှာသတိပေးထားပါတယ်။ ([OpenAI Developers][2])
+
+---
+
+# 9. Parallel vs Sequential Agents
+
+Multi-agent workflow မှာ agents အားလုံးကို parallel run လုပ်တာ အမြဲမကောင်းပါဘူး။ Task အမျိုးအစားအလိုက် parallel သို့မဟုတ် sequential သွားရမယ်။
+
+## 9.1 Parallel သုံးသင့်တဲ့အချိန်
+
+```text
+- Codebase exploration
+- PR review by different concerns
+- Security / quality / test flakiness review
+- Frontend and backend design options research
+- Documentation/API behavior verification
+```
+
+Example—
+
+```text
+Spawn one agent for security review.
+Spawn one agent for test coverage review.
+Spawn one agent for performance review.
+Summarize all findings.
+```
+
+## 9.2 Sequential သုံးသင့်တဲ့အချိန်
+
+```text
+- SPEC မရှိသေးတဲ့ feature
+- Database schema decision
+- API contract decision
+- Frontend depends on backend contract
+- Deployment after tests pass
+```
+
+Example—
+
+```text
+SPEC Maintainer → Backend Developer → Frontend Developer → Test Engineer → Verifier
+```
+
+## 9.3 Rule
+
+```text
+Requirement / architecture decision မပြီးခင် implementation agents မလွှတ်ပါနဲ့။
+Implementation မပြီးခင် verifier မလွှတ်ပါနဲ့။
+Verifier pass မဖြစ်ခင် deployer မလွှတ်ပါနဲ့။
+```
+
+---
+
+# 10. Context Management in Level 5
+
+Level 5 ရဲ့အကြီးဆုံးအားသာချက်တစ်ခုက context ကိုခွဲနိုင်တာပါ။ Main conversation ထဲမှာ logs, search results, file dumps တွေအများကြီးမထည့်ဘဲ subagent တစ်ယောက်က သူ့ context ထဲမှာအလုပ်လုပ်ပြီး summary ပဲပြန်ပေးနိုင်တယ်။
+
+Example—
+
+```text
+Test Engineer:
+Test logs အရှည်ကြီးဖတ်ပြီး failing tests summary ပဲပြန်ပေး
+
+Verifier:
+SPEC.md ဖတ်ပြီး pass/fail table ပဲပြန်ပေး
+
+Auditor:
+Security risk report summary ပဲပြန်ပေး
+```
+
+Claude Code docs မှာ subagents တွေက main conversation context ကို preserve လုပ်ဖို့၊ exploration/implementation output တွေကို main conversation ထဲမပွစေဖို့အသုံးဝင်ကြောင်းဖော်ပြထားပါတယ်။ ([Claude][1])
+
+Context management rule—
+
+```text
+Subagent output = summary + evidence
+Raw logs အားလုံး main conversation ထဲမထည့်ပါနဲ့။
+```
+
+---
+
+# 11. Tool Permissions in Level 5
+
+Role ခွဲရင် tool permission လည်းခွဲရမယ်။
+
+ဥပမာ—
+
+| Agent              | Tools                                                    | မလုပ်ရ                                   |
+| ------------------ | -------------------------------------------------------- | ---------------------------------------- |
+| SPEC Maintainer    | Read, Write SPEC/docs                                    | product code မပြင်                       |
+| Frontend Developer | Read/Edit frontend files, Bash build                     | backend/db မပြင်                         |
+| Backend Developer  | Read/Edit API files, tests                               | frontend UI မပြင်                        |
+| Test Engineer      | Read/Edit test files, Bash test                          | product behavior မပြောင်း                |
+| Verifier           | Read, Bash test/build                                    | code edit မလုပ်                          |
+| Auditor            | Read, Grep, Bash read-only checks                        | code edit/deploy မလုပ်                   |
+| Deployer           | Read deployment docs, Bash deploy commands with approval | production deploy without approval မလုပ် |
+
+Claude Code docs မှာ custom subagent file တွေမှာ YAML frontmatter သုံးပြီး `name`, `description` required ဖြစ်ကြောင်း၊ `tools`, `disallowedTools`, `model`, `permissionMode`, `skills`, `mcpServers`, `hooks` စတဲ့ fields တွေနဲ့ subagent capabilities ကိုထိန်းနိုင်ကြောင်းဖော်ပြထားပါတယ်။ ([Claude][1])
+
+Beginner rule—
+
+```text
+Reviewer / Verifier / Auditor agents ကို read-only ဖြစ်အောင်ထားပါ။
+Developer agents ကို သူတို့ layer ထဲက files ပဲပြင်ခွင့်ပေးပါ။
+Deployer agent ကို production action အတွက် manual approval gate ထည့်ပါ။
+```
+
+---
+
+# 12. Basic Subagent File Template
+
+နောက်ပိုင်း `.claude/agents/` ထဲမှာ subagent files တွေထားမယ်။ ဒီအခန်းမှာ concept အနေနဲ့ template ကိုမြင်ထားပါ။
+
+```md
+---
+name: verifier
+description: Use after implementation to verify a feature against SPEC acceptance criteria.
+tools: Read, Grep, Glob, Bash
+model: sonnet
+---
+
+You are the Verifier.
+
+Responsibilities:
+- Read SPEC.md and relevant acceptance criteria.
+- Check whether the implemented feature satisfies each criterion.
+- Run or inspect available verification evidence.
+- Report PASS/FAIL clearly.
+- Do not implement code.
+- Do not silently fix issues.
+
+Output format:
+## Verification Summary
+## Acceptance Criteria Table
+## Failures
+## Reproduction Steps
+## Recommendation
+```
+
+သတိ—
+
+```text
+Verifier ကို Edit/Write tool မပေးတာက safety design ဖြစ်တယ်။
+```
+
+---
+
+# 13. Core Agents for This Course
+
+ဒီ course အတွက် အခြေခံ agent files ကို နောက်ပိုင်း Part 10/12 မှာတကယ်ရေးမယ်။ အခု Chapter 12 မှာ names နဲ့ responsibilities ကိုမှတ်ထားပါ။
+
+```text
+.claude/agents/
+  planner.md
+  spec-maintainer.md
+  frontend-developer.md
+  backend-developer.md
+  pwa-developer.md
+  admin-developer.md
+  test-engineer.md
+  verifier.md
+  auditor.md
+  deployer.md
+```
+
+အခြေခံ principle—
+
+```text
+One agent = one clear role
+One role = clear output
+One output = coordinator can use
+```
+
+မကောင်းတဲ့ agent role—
+
+```text
+super-agent.md
+လုပ်ချင်တာအကုန်လုပ်
+```
+
+ကောင်းတဲ့ agent role—
+
+```text
+verifier.md
+SPEC acceptance criteria ကို PASS/FAIL စစ်
+Code မပြင်
+```
+
+---
+
+# 14. Coordinator Prompt Anatomy
+
+Level 5 prompt က Level 4 prompt ထက် orchestration ပိုပါရမယ်။
+
+```text
+1. Coordinator role
+2. Goal
+3. Scope
+4. Available subagents
+5. Workflow order
+6. Parallel vs sequential instructions
+7. Agent-specific outputs
+8. Safety rules
+9. Approval gates
+10. Final consolidated report format
+```
+
+Example—
+
+```text
+You are the Coordinator Agent.
+
+Goal:
+Registration History feature ကို Level 5 workflow နဲ့လုပ်ချင်ပါတယ်။
+
+Scope:
+Static HTML/CSS/JS lab app only.
+No backend, no database, no packages.
+
+Available agents:
+- planner
+- spec-maintainer
+- frontend-developer
+- test-engineer
+- verifier
+- auditor
+
+Workflow:
+1. planner: task breakdown only
+2. spec-maintainer: write acceptance criteria only
+3. frontend-developer: implement after human approval
+4. test-engineer: propose manual and automated test plan
+5. verifier: PASS/FAIL against acceptance criteria
+6. auditor: privacy/security/maintainability review
+
+Safety:
+- Do not edit before plan approval
+- Do not install packages
+- Do not read .env
+- Do not commit without approval
+
+Final output:
+- Agent summaries
+- Changed files
+- Acceptance criteria status
+- Risks
+- Human decision needed
+```
+
+---
+
+# 15. Level 5 Example — Registration History Feature
+
+Level 4 မှာ Registration History feature ကို Coding Agent တစ်ယောက်လုပ်ခဲ့တယ်။ Level 5 မှာ role ခွဲလုပ်မယ်။
+
+## Single-agent Level 4
+
+```text
+Coding Agent:
+Plan → implement → verify → summary
+```
+
+## Multi-agent Level 5
+
+```text
+Planner:
+Feature breakdown
+
+SPEC Maintainer:
+Acceptance criteria
+
+Frontend Developer:
+HTML/CSS/JS implementation
+
+Test Engineer:
+Manual tests / future automated tests
+
+Verifier:
+PASS/FAIL criteria
+
+Auditor:
+localStorage/privacy/maintainability risk
+
+Coordinator:
+Final summary + recommendation
+```
+
+ပိုနှေးနိုင်တယ်။ Token/cost ပိုသုံးနိုင်တယ်။ ဒါပေမယ့်—
+
+```text
+- Requirement ပိုရှင်း
+- Verification ပိုသီးခြား
+- Auditor risk မလွတ်
+- Human decision ပိုကောင်း
+```
+
+ဖြစ်နိုင်တယ်။
+
+---
+
+# 16. Level 5 ကို ဘယ်အချိန်သုံးသင့်လဲ
+
+## 16.1 Full-stack feature
+
+ဥပမာ—
+
+```text
+Event registration feature:
+- frontend form
+- backend API
+- database table
+- tests
+- verifier
+- auditor
+```
+
+## 16.2 Release-ready workflow
+
+```text
+Feature freeze
+Final verification
+Security audit
+Deployment checklist
+Smoke test
+Rollback plan
+```
+
+## 16.3 PR review with multiple concerns
+
+```text
+Security agent
+Bug agent
+Maintainability agent
+Performance agent
+Test coverage agent
+```
+
+## 16.4 Large codebase onboarding
+
+```text
+Explorer agent
+Architecture mapper
+Test command finder
+Risk area finder
+First task planner
+```
+
+## 16.5 Documentation + implementation separation
+
+```text
+SPEC Maintainer updates docs
+Developer implements
+Verifier checks implementation matches SPEC
+```
+
+---
+
+# 17. Level 5 ကို မသုံးသင့်သေးတဲ့အချိန်
+
+## 17.1 Tiny task
+
+```text
+Button text တစ်ကြောင်းပြင်
+CSS color တစ်ခုပြင်
+README typo ပြင်
+```
+
+ဒီလို task မှာ multi-agent workflow က overkill ဖြစ်နိုင်တယ်။
+
+## 17.2 Requirement မသေချာသေး
+
+User ကိုမေးရမယ့် product decision များနေသေးရင် agents မလွှတ်ခင် decision record ပြင်ပါ။
+
+## 17.3 Git state dirty
+
+Uncommitted changes ရှိနေချိန် agent အများကြီးလွှတ်ရင် changes ရောသွားနိုင်တယ်။
+
+## 17.4 Cost/token budget နည်း
+
+Subagent workflow တွေက single-agent run ထက် token ပိုသုံးနိုင်တယ်လို့ Codex docs ကသတိပေးထားပါတယ်။ ([OpenAI Developers][2])
+
+## 17.5 Human review မလုပ်နိုင်တဲ့အချိန်
+
+Multi-agent output များလာနိုင်တယ်။ Review မလုပ်နိုင်ရင် Level 5 မသုံးသင့်ပါ။
+
+---
+
+# 18. Level 5 Risks
+
+## 18.1 Coordination overhead
+
+Agent အများကြီးသုံးတာက task သေးသေးအတွက် အချိန်/စာပိုများစေနိုင်တယ်။
+
+## 18.2 Conflicting recommendations
+
+Verifier က pass လို့ပြောနိုင်တယ်။ Auditor က risk ရှိတယ်လို့ပြောနိုင်တယ်။ Human က final decision ယူရမယ်။
+
+## 18.3 Duplicate work
+
+Frontend agent နဲ့ Admin agent က utility function တူတူရေးနိုင်တယ်။
+
+## 18.4 Context mismatch
+
+SPEC Maintainer updated requirements ကို Developer agent မဖတ်ရင် implementation မကိုက်နိုင်တယ်။
+
+## 18.5 Race conditions / file conflicts
+
+Parallel agents တွေက file တူတူပြင်ရင် conflict ဖြစ်နိုင်တယ်။
+
+## 18.6 Cost increase
+
+Subagent တစ်ယောက်ချင်းစီက model/tool work လုပ်တာကြောင့် token/cost တက်နိုင်တယ်။
+
+## 18.7 False confidence
+
+Agent အများကြီးသုံးလို့ result သေချာတယ်လို့ မယူဆပါနဲ့။ Verifier/Auditor output ကို human ကစစ်ရမယ်။
+
+---
+
+# 19. Level 5 Safety Rules
+
+```text
+Rule 1 — Git status clean ဖြစ်မှ multi-agent run စပါ။
+Rule 2 — Coordinator က workflow order ကိုသတ်မှတ်ပါ။
+Rule 3 — SPEC update မပြီးခင် implementation မလုပ်ပါနဲ့။
+Rule 4 — Developer agents ကို layer-specific files ပဲခွင့်ပြုပါ။
+Rule 5 — Verifier/Auditor ကို read-only ထားပါ။
+Rule 6 — Agents အများကြီးကို same file တစ်ပြိုင်နက်မပြင်ခိုင်းပါနဲ့။
+Rule 7 — Package install / migration / deploy အတွက် approval gate ထည့်ပါ။
+Rule 8 — Final output ကို consolidated table နဲ့တောင်းပါ။
+Rule 9 — Human final decision မရှိဘဲ merge/deploy မလုပ်ပါနဲ့။
+Rule 10 — Subagent output တွေကို evidence-based ဖြစ်အောင်တောင်းပါ။
+```
+
+---
+
+# 20. Step-by-step Lab
+
+ဒီ lab မှာ multi-agent orchestration ကို simulation အနေနဲ့လေ့ကျင့်မယ်။ Tool မှာ actual subagent support ရှိရင် subagents တွေကိုသုံးပါ။ မရှိသေးရင် prompt roles အနေနဲ့ Chat/CLI Agent ကို “role-play” ခိုင်းပြီးလုပ်နိုင်တယ်။
+
+## Lab Goal
+
+```text
+Registration History feature ကို multi-agent workflow နဲ့ plan → spec → implement → test → verify → audit → summary လုပ်နိုင်မယ်။
+```
+
+## Folder Structure
+
+```text
+agentic-zero-to-hero/
+└── playground/
+    └── chapter-12-multi-agent/
+        ├── index.html
+        ├── style.css
+        ├── app.js
+        ├── SPEC.md
+        ├── VERIFICATION_REPORT.md
+        └── AUDIT_REPORT.md
+```
+
+---
+
+## Step 1 — Folder ဆောက်ပါ
+
+macOS/Linux/Git Bash—
+
+```bash
+cd ~/Desktop/agentic-zero-to-hero
+mkdir -p playground/chapter-12-multi-agent
+cd playground/chapter-12-multi-agent
+touch index.html style.css app.js SPEC.md VERIFICATION_REPORT.md AUDIT_REPORT.md
+```
+
+Windows PowerShell—
+
+```powershell
+cd ~/Desktop/agentic-zero-to-hero
+mkdir playground/chapter-12-multi-agent
+cd playground/chapter-12-multi-agent
+New-Item index.html
+New-Item style.css
+New-Item app.js
+New-Item SPEC.md
+New-Item VERIFICATION_REPORT.md
+New-Item AUDIT_REPORT.md
+```
+
+---
+
+## Step 2 — Starter App Files ထည့်ပါ
+
+`index.html`, `style.css`, `app.js` ကို Chapter 11 starter files နဲ့တူအောင်ထည့်ပါ။ ဒီ lab ရဲ့အဓိကက multi-agent workflow ဖြစ်လို့ code ကိုအရှည်မပြန်ထည့်တော့ပါ။ Chapter 11 starter app ကို copy လုပ်နိုင်ပါတယ်။
+
+---
+
+## Step 3 — Coordinator Prompt ပေးပါ
+
+```text
+You are the Coordinator Agent.
+
+Goal:
+playground/chapter-12-multi-agent app ထဲမှာ Registration History feature ကို multi-agent workflow နဲ့လုပ်ချင်ပါတယ်။
+
+Scope:
+- Static HTML/CSS/JS only
+- No backend
+- No database
+- No package install
+- Allowed folder only: playground/chapter-12-multi-agent/
+
+Agents to use as roles:
+1. planner
+2. spec-maintainer
+3. frontend-developer
+4. test-engineer
+5. verifier
+6. auditor
+
+Workflow:
+1. planner က task breakdown ပေးပါ
+2. spec-maintainer က SPEC.md section draft ပေးပါ
+3. implementation မလုပ်ခင် human approval တောင်းပါ
+4. frontend-developer က approved plan အတိုင်း implement လုပ်ပါ
+5. test-engineer က manual test cases ပေးပါ
+6. verifier က acceptance criteria PASS/FAIL စစ်ပါ
+7. auditor က security/privacy/maintainability audit လုပ်ပါ
+8. coordinator က consolidated final summary ပေးပါ
+
+Safety:
+- .env မဖတ်ပါနဲ့
+- package.json မပြင်ပါနဲ့
+- package install မလုပ်ပါနဲ့
+- git commit မလုပ်ပါနဲ့
+- approval မရသေးဘဲ implementation မလုပ်ပါနဲ့
+
+Start with planner and spec-maintainer only.
+Code မပြင်သေးပါနဲ့။
+```
+
+---
+
+## Step 4 — Planner Output ကို Review လုပ်ပါ
+
+Planner output ထဲမှာ ဒီလိုပါသင့်တယ်။
+
+```text
+Task breakdown:
+1. Update SPEC
+2. Add history section to HTML
+3. Add list styles
+4. Add localStorage logic
+5. Add ticket code generation
+6. Add clear history
+7. Manual test cases
+8. Verification report
+9. Audit report
+```
+
+စစ်ရန်—
+
+```text
+[ ] Backend မပါဘူးလား
+[ ] Package install မပါဘူးလား
+[ ] Allowed folder အတွင်းပဲလား
+[ ] Verification/Audit ပါလား
+```
+
+---
+
+## Step 5 — SPEC Maintainer Output ကို Review လုပ်ပါ
+
+`SPEC.md` ထဲမှာ ဒီလိုပါသင့်တယ်။
+
+```md
+# SPEC.md
+
+## Feature: Registration History
+
+### Goal
+Valid registration submissions should be saved to a visible attendee history list and persisted in localStorage.
+
+### Scope
+- Static frontend only
+- localStorage persistence
+- Ticket code generation
+- Clear history button
+
+### Non-goals
+- Backend API
+- Database
+- Authentication
+- Email/SMS/Viber notification
+- Package installation
+
+### Acceptance Criteria
+- Empty name shows “နာမည်ဖြည့်ပါ။”
+- Empty phone shows “ဖုန်းနံပါတ်ဖြည့်ပါ။”
+- Valid submit generates ticket code
+- Attendee appears in list
+- History remains after refresh
+- Clear history clears list and localStorage
+- Browser console has no errors
+```
+
+---
+
+## Step 6 — Implementation Approval ပေးပါ
+
+Plan + SPEC approve ဖြစ်ရင်—
+
+```text
+Planner output နဲ့ SPEC draft ကို approve လုပ်ပါတယ်။
+
+frontend-developer ကို implement ခိုင်းပါ။
+
+Rules:
+- Allowed folder: playground/chapter-12-multi-agent/
+- Allowed files: index.html, style.css, app.js, SPEC.md
+- No package install
+- No backend/database
+- After implementation, do not commit
+- Provide changed files summary
+```
+
+---
+
+## Step 7 — Test Engineer Prompt
+
+Implementation ပြီးရင်—
+
+```text
+Use test-engineer role.
+
+Registration History feature အတွက် manual test plan ပေးပါ။
+Code မပြင်ပါနဲ့။
+
+Test cases:
+- empty name
+- empty phone
+- valid submit
+- refresh persistence
+- clear history
+- multiple attendees
+- browser console errors
+```
+
+---
+
+## Step 8 — Verifier Prompt
+
+```text
+Use verifier role.
+
+SPEC.md ထဲက Registration History acceptance criteria အတိုင်း implementation ကိုစစ်ပါ။
+Code မပြင်ပါနဲ့။
+
+Output:
+| Criteria | Status | Evidence |
+```
+
+Verifier output ကို `VERIFICATION_REPORT.md` ထဲရေးနိုင်တယ်။
+
+---
+
+## Step 9 — Auditor Prompt
+
+```text
+Use auditor role.
+
+Registration History feature ကို audit လုပ်ပါ။
+Code မပြင်ပါနဲ့။
+
+စစ်ရန်:
+- localStorage privacy risk
+- phone number storage risk
+- console logging PII ရှိ/မရှိ
+- input validation
+- maintainability
+- dependency risk
+- scope creep
+
+Output:
+- Severity
+- Finding
+- Evidence
+- Recommendation
+```
+
+Auditor output ကို `AUDIT_REPORT.md` ထဲရေးနိုင်တယ်။
+
+---
+
+## Step 10 — Coordinator Final Summary
+
+```text
+Coordinator Agent အနေနဲ့ final summary ပေးပါ။
+
+ပြန်ပေးရန်:
+- Agents used
+- Changed files
+- SPEC status
+- Test plan summary
+- Verification PASS/FAIL
+- Audit findings
+- Human decision needed
+- Suggested commit message
+```
+
+---
+
+## Step 11 — Git Review + Commit
+
+Project root ထဲပြန်သွားပါ။
+
+```bash
+cd ~/Desktop/agentic-zero-to-hero
+git status
+git diff playground/chapter-12-multi-agent/
+```
+
+စစ်ရန်—
+
+```text
+[ ] Expected folder ထဲက files ပဲပြင်ထားလား
+[ ] package.json မပြင်ထားဘူးလား
+[ ] .env မပါဘူးလား
+[ ] node_modules မပါဘူးလား
+[ ] SPEC/Verification/Audit reports ပါလား
+```
+
+Commit—
+
+```bash
+git add playground/chapter-12-multi-agent/
+git commit -m "add level 5 multi-agent orchestration lab"
+```
+
+---
+
+# 21. Lab Reflection
+
+Lab note ထဲမှာ ဒီလိုရေးပါ။
+
+```md
+# Chapter 12 Lab — Multi-Agent Orchestration
+
+## Goal
+Registration History feature ကို multi-agent workflow နဲ့ဆောက်သည်။
+
+## Agents Used
+- planner
+- spec-maintainer
+- frontend-developer
+- test-engineer
+- verifier
+- auditor
+- coordinator
+
+## Workflow
+1. Planner task breakdown
+2. SPEC Maintainer wrote acceptance criteria
+3. Frontend Developer implemented feature
+4. Test Engineer produced manual tests
+5. Verifier checked criteria
+6. Auditor checked risk
+7. Coordinator summarized results
+
+## Key Lesson
+Level 5 သည် code ရေးတာထက် workflow orchestration ဖြစ်သည်။
+Implementation agent နဲ့ verification/audit agent ကိုခွဲခြင်းက quality control အတွက်အရေးကြီးသည်။
+
+## Risks Found
+- localStorage ထဲ phone number သိမ်းခြင်းသည် privacy consideration လိုသည်
+- Clear history feature သုံးသူကို confirmation လိုနိုင်သည်
+- Future backend migration တွင် data retention policy လိုနိုင်သည်
+```
+
+---
+
+# 22. Copy-paste Prompts
+
+## 22.1 Multi-Agent Coordinator Prompt
+
+```text
+You are the Coordinator Agent.
+
+Goal:
+[feature goal]
+
+Scope:
+[scope]
+
+Non-goals:
+[non-goals]
+
+Available agents:
+- planner
+- spec-maintainer
+- frontend-developer
+- backend-developer
+- pwa-developer
+- admin-developer
+- test-engineer
+- verifier
+- auditor
+- deployer
+
+Workflow:
+1. planner: task breakdown
+2. spec-maintainer: SPEC/acceptance criteria
+3. relevant developer agents: implementation plan
+4. human approval
+5. implementation
+6. test-engineer: test plan/results
+7. verifier: acceptance criteria PASS/FAIL
+8. auditor: risk report
+9. coordinator: consolidated summary
+
+Safety:
+- No implementation before approval
+- No package install without approval
+- No .env access
+- No deployment without approval
+- No Git commit without approval
+
+Start with planning and SPEC only.
+```
+
+---
+
+## 22.2 Spawn Parallel Review Agents Prompt
+
+```text
+Code မပြင်ပါနဲ့။
+Current branch changes ကို parallel review လုပ်ချင်ပါတယ်။
+
+Spawn/reuse role-specific agents:
+1. security reviewer
+2. bug reviewer
+3. test coverage reviewer
+4. maintainability reviewer
+5. accessibility reviewer
+
+Each agent should return:
+- top findings
+- severity
+- evidence
+- recommendation
+
+Coordinator should consolidate results into one report.
+```
+
+---
+
+## 22.3 Verifier Prompt
+
+```text
+Use verifier role.
+
+Feature:
+[feature name]
+
+SPEC / Acceptance Criteria:
+[paste criteria]
+
+Implementation:
+[paths or summary]
+
+Code မပြင်ပါနဲ့။
+
+Output:
+| Criteria | Status | Evidence |
+|---|---|---|
+
+If FAIL:
+- reproduction steps
+- likely cause
+- recommended next task
+```
+
+---
+
+## 22.4 Auditor Prompt
+
+```text
+Use auditor role.
+
+Code မပြင်ပါနဲ့။
+အောက်ပါ feature ကို audit လုပ်ပါ:
+
+Feature:
+[feature name]
+
+စစ်ရန်:
+- security
+- privacy / PII
+- input validation
+- auth/permission risk
+- dependency risk
+- logging risk
+- maintainability
+- performance
+- scope creep
+
+Output:
+| Severity | Finding | Evidence | Recommendation |
+```
+
+---
+
+## 22.5 Agent Conflict Resolution Prompt
+
+```text
+Subagents တွေရဲ့ recommendation တွေ conflict ဖြစ်နေပါတယ်။
+
+Inputs:
+Verifier says:
+[paste]
+
+Auditor says:
+[paste]
+
+Developer says:
+[paste]
+
+Coordinator အနေနဲ့:
+- conflict ကိုရှင်းပြပါ
+- decision options ပေးပါ
+- risk/benefit နှိုင်းယှဉ်ပါ
+- human decision needed item ကိုဖော်ပြပါ
+Code မပြင်ပါနဲ့။
+```
+
+---
+
+## 22.6 Multi-Agent Final Report Prompt
+
+```text
+Coordinator final report ပေးပါ။
+
+ပါရမယ့်အပိုင်း:
+## Goal
+## Agents Used
+## Work Completed
+## Changed Files
+## Acceptance Criteria Status
+## Verification Result
+## Audit Findings
+## Open Questions
+## Risks
+## Recommended Next Step
+## Suggested Commit Message
+```
+
+---
+
+# 23. Expected Output
+
+ဒီအခန်းပြီးရင် learner က အောက်ပါ summary ကိုရေးနိုင်ရမယ်။
+
+```md
+# Level 5 — Multi-Agent Orchestration Summary
+
+## Definition
+Level 5 ဆိုတာ specialized agents အများကြီးကို role ခွဲပြီး software development workflow တစ်ခုကို စနစ်တကျလုပ်စေခြင်းဖြစ်တယ်။
+
+## Difference from Level 4
+Level 4 Coding Agent က feature တစ်ခုကို တစ်ယောက်တည်း plan/implement/verify လုပ်နိုင်တယ်။
+Level 5 မှာ Planner, SPEC Maintainer, Developer, Test Engineer, Verifier, Auditor, Deployer တို့ကို role ခွဲပြီးလုပ်တယ်။
+
+## Core Roles
+- Coordinator
+- Planner
+- SPEC Maintainer
+- Frontend Developer
+- Backend Developer
+- PWA Developer
+- Admin Developer
+- Test Engineer
+- Verifier
+- Auditor
+- Deployer
+
+## Good For
+- Full-stack features
+- Large codebase onboarding
+- Release readiness
+- PR review by multiple concerns
+- Verification/audit separation
+
+## Risks
+- Coordination overhead
+- Conflicting recommendations
+- Duplicate work
+- Cost/token increase
+- Context mismatch
+- False confidence
+
+## Rule
+Implementation agent, Verifier, Auditor, Deployer ကို role ခွဲပါ။
+Human approval မရှိဘဲ merge/deploy မလုပ်ပါနဲ့။
+```
+
+---
+
+# 24. Common Errors
+
+## Error 1 — Agent အများကြီးသုံးတာက အလိုလိုကောင်းတယ်လို့ထင်ခြင်း
+
+Agent အများကြီးသုံးတာက task ကြီး/ရှုပ်တဲ့အခါကောင်းတယ်။ Tiny task အတွက် overkill ဖြစ်နိုင်တယ်။
+
+ပြင်နည်း—
+
+```text
+Task size နဲ့ workflow complexity ကိုချိန်ပါ။
+```
+
+---
+
+## Error 2 — Coordinator မရှိဘဲ subagents လွှတ်ခြင်း
+
+Subagents တွေထွက်လာတဲ့ result တွေကိုစုစည်းမယ့် coordinator မရှိရင် report တွေကွဲသွားမယ်။
+
+ပြင်နည်း—
+
+```text
+Always use a Coordinator summary.
+```
+
+---
+
+## Error 3 — SPEC မပြီးခင် Developer agents လွှတ်ခြင်း
+
+Requirement မရှင်းသေးခင် implementation လုပ်ရင် rework ဖြစ်မယ်။
+
+ပြင်နည်း—
+
+```text
+SPEC Maintainer first.
+Developer after acceptance criteria.
+```
+
+---
+
+## Error 4 — Verifier ကို code ပြင်ခွင့်ပေးခြင်း
+
+Verifier က code မပြင်ဘဲ pass/fail စစ်သင့်တယ်။ Verifier ကတိတ်တိတ်ပြင်သွားရင် independent check မဟုတ်တော့ဘူး။
+
+ပြင်နည်း—
+
+```text
+Verifier = read-only
+```
+
+---
+
+## Error 5 — Auditor ကိုနောက်ဆုံးတွင် skip လုပ်ခြင်း
+
+Feature အလုပ်လုပ်တာနဲ့ security/privacy/maintainability ကောင်းတာ မတူဘူး။
+
+ပြင်နည်း—
+
+```text
+Release မလုပ်ခင် Auditor report လို။
+```
+
+---
+
+## Error 6 — Same files ကို parallel agents ပြင်ခိုင်းခြင်း
+
+File conflict ဖြစ်နိုင်တယ်။
+
+ပြင်နည်း—
+
+```text
+Parallel agents = mostly read/review.
+Write operations = sequential / scoped.
+```
+
+---
+
+## Error 7 — Subagent output ကို raw logs အဖြစ်အများကြီးပြန်တောင်းခြင်း
+
+Main context ပွသွားမယ်။
+
+ပြင်နည်း—
+
+```text
+Return summary + evidence, not full logs.
+```
+
+---
+
+## Error 8 — Cost မစဉ်းစားခြင်း
+
+Subagent workflows တွေက token/cost တက်နိုင်တယ်။
+
+ပြင်နည်း—
+
+```text
+Use Level 5 only when task complexity justifies it.
+```
+
+---
+
+# 25. Debug / Recovery
+
+## 25.1 Agents တွေရဲ့ output conflict ဖြစ်ရင်
+
+Prompt—
+
+```text
+Subagent outputs conflict ဖြစ်နေပါတယ်။
+Code မပြင်ပါနဲ့။
+
+လုပ်ရန်:
+- conflict points list ပေးပါ
+- evidence တစ်ခုချင်းစီပြပါ
+- decision options ပေးပါ
+- safest recommendation ပေးပါ
+- human decision needed ကိုဖော်ပြပါ
+```
+
+---
+
+## 25.2 Agent တစ်ယောက် scope ကျော်သွားရင်
+
+Prompt—
+
+```text
+[agent name] က scope ကျော်သွားပါတယ်။
+
+Allowed scope:
+[paste]
+
+Actual changes/output:
+[paste]
+
+လုပ်ရန်:
+- scope violation ကိုဖော်ပြပါ
+- changes rollback လိုလားပြောပါ
+- revised task prompt ပေးပါ
+- code မပြင်ပါနဲ့
+```
+
+---
+
+## 25.3 Parallel agents ကြောင့် file conflict ဖြစ်ရင်
+
+လုပ်ရန်—
+
+```text
+1. Stop further edits
+2. git status
+3. git diff
+4. Identify conflicting files
+5. Choose one source of truth
+6. Restore/reapply carefully
+```
+
+Prompt—
+
+```text
+Parallel agents ကြောင့် file conflict ဖြစ်နိုင်ပါတယ်။
+Code မပြင်သေးပါနဲ့။
+
+လုပ်ရန်:
+- changed files list
+- same file touched by multiple agents ရှိ/မရှိ
+- conflict risk
+- safe merge/rollback plan
+```
+
+---
+
+## 25.4 Verifier PASS, Auditor HIGH risk ဖြစ်ရင်
+
+PASS ဆိုတာ feature behavior ကိုက်တာပဲ။ Auditor HIGH risk ရှိရင် release မလုပ်သင့်နိုင်။
+
+Prompt—
+
+```text
+Verifier က PASS ပြောပြီး Auditor က HIGH risk ပြောပါတယ်။
+Coordinator အနေနဲ့ release recommendation ပေးပါ။
+
+စစ်ရန်:
+- PASS criteria ကဘာကိုစစ်တာလဲ
+- HIGH risk ကဘာလဲ
+- release block လုပ်သင့်လား
+- fix-first task ဘာလဲ
+```
+
+---
+
+## 25.5 Multi-agent session ရှုပ်သွားရင်
+
+Prompt—
+
+```text
+Multi-agent session ကို reset summary လုပ်ပါ။
+
+ပြန်ပေးရန်:
+- Goal
+- Agents used
+- Current state
+- Completed outputs
+- Pending decisions
+- Changed files
+- Risks
+- Next safe step
+
+Code မပြင်ပါနဲ့။
+```
+
+---
+
+# 26. Verification Checklist
+
+ဒီအခန်းကိုနားလည်ပြီလား စစ်ပါ။
+
+```text
+[ ] Level 5 Multi-Agent Orchestration ဆိုတာဘာလဲရှင်းပြနိုင်တယ်
+[ ] Level 4 Coding Agent နဲ့ Level 5 ကွာခြားချက်သိတယ်
+[ ] Coordinator Agent ရဲ့တာဝန်ကိုနားလည်တယ်
+[ ] Planner, SPEC Maintainer, Developer, Test Engineer, Verifier, Auditor, Deployer role တွေကိုခွဲနိုင်တယ်
+[ ] Subagent ဆိုတာ specialized agent ဖြစ်ကြောင်းနားလည်တယ်
+[ ] Implementation agent နဲ့ verifier/auditor ကိုသီးခြားထားရမယ်ဆိုတာသိတယ်
+[ ] Parallel vs sequential agents ကိုခွဲနိုင်တယ်
+[ ] Context management အတွက် subagents အသုံးဝင်ကြောင်းနားလည်တယ်
+[ ] Tool permissions ကို role အလိုက်ကန့်သတ်သင့်ကြောင်းသိတယ်
+[ ] Multi-agent workflow က token/cost ပိုသုံးနိုင်ကြောင်းသိတယ်
+[ ] Same files ကို parallel agents မပြင်ခိုင်းသင့်ကြောင်းသိတယ်
+[ ] Coordinator final report တောင်းနိုင်တယ်
+[ ] Human approval မရှိဘဲ merge/deploy မလုပ်သင့်ကြောင်းနားလည်တယ်
+```
+
+---
+
+# 27. Mini Assignment
+
+## Assignment 1 — Level 5 Definition ရေးပါ
+
+ကိုယ်ပိုင်စကားနဲ့ရေးပါ။
+
+```text
+Level 5: Multi-Agent Orchestration ဆိုတာ...
+```
+
+ပါရမယ့်အချက်—
+
+```text
+- Agent အများကြီး
+- Role ခွဲ
+- Coordinator ပါ
+- Verifier/Auditor သီးခြား
+- Human final decision
+```
+
+---
+
+## Assignment 2 — Agent Roles Table ရေးပါ
+
+အောက်ပါ columns နဲ့ table ရေးပါ။
+
+```text
+Agent
+Main Responsibility
+Can Edit Code?
+Should Be Read-only?
+Output
+```
+
+Agents—
+
+```text
+planner
+spec-maintainer
+frontend-developer
+backend-developer
+test-engineer
+verifier
+auditor
+deployer
+coordinator
+```
+
+---
+
+## Assignment 3 — Sequential Workflow ရေးပါ
+
+Feature—
+
+```text
+Event Registration API + Frontend Form
+```
+
+Agent workflow ကို အဆင့်လိုက်ရေးပါ။
+
+Expected idea—
+
+```text
+Planner → SPEC Maintainer → Backend Developer → Frontend Developer → Test Engineer → Verifier → Auditor → Coordinator
+```
+
+---
+
+## Assignment 4 — Parallel Review Prompt ရေးပါ
+
+Current branch ကို review လုပ်ဖို့ agents ၅ ယောက်ကို parallel လွှတ်မယ့် prompt ရေးပါ။
+
+Agents—
+
+```text
+security reviewer
+bug reviewer
+test reviewer
+maintainability reviewer
+accessibility reviewer
+```
+
+---
+
+## Assignment 5 — Risk Decision လုပ်ပါ
+
+အောက်ပါ case ကိုဆုံးဖြတ်ပါ။
+
+```text
+Verifier: PASS
+Auditor: HIGH risk — attendee phone numbers are logged to console
+Developer: It only logs in development
+```
+
+ဖြေရမယ့်အချက်—
+
+```text
+- Release လုပ်သင့်လား
+- ဘာကြောင့်လဲ
+- Next task ဘာလဲ
+- ဘယ် agent ကိုခိုင်းမလဲ
+```
+
+Expected idea—
+
+```text
+Release block / fix first.
+Auditor finding သည် PII risk ဖြစ်သည်။
+Developer agent ကို console logging ဖယ်ခိုင်းပြီး Verifier/Auditor ပြန်စစ်ရမယ်။
+```
+
+---
+
+## Assignment 6 — Coordinator Prompt ရေးပါ
+
+Registration History feature ကို multi-agent workflow နဲ့လုပ်မယ့် coordinator prompt ရေးပါ။
+
+ပါရမယ့်အချက်—
+
+```text
+- Goal
+- Scope
+- Non-goals
+- Agents
+- Workflow order
+- Safety rules
+- Approval gates
+- Final report format
+```
+
+---
+
+# 28. Part 2 Final Summary
+
+Part 2 မှာ Coding Agents Level 0 to Level 5 ကိုအဆင့်လိုက်လေ့လာခဲ့တယ်။
+
+```text
+Level 0 — ChatGPT Code Example
+AI က code example ပေးတယ်။ User က copy-paste/run/test လုပ်တယ်။
+
+Level 1 — AI Autocomplete
+Editor ထဲမှာ AI က next line/block suggestion ပေးတယ်။
+
+Level 2 — Editor Agent
+Selected file/code ကို context အဖြစ်ယူပြီး reviewable edits propose လုပ်တယ်။
+
+Level 3 — CLI Agent
+Terminal ထဲမှာ project folder, commands, Git, test/build output နဲ့အလုပ်လုပ်နိုင်တယ်။
+
+Level 4 — Coding Agent
+Feature-level task ကို plan → implement → verify loop နဲ့လုပ်နိုင်တယ်။
+
+Level 5 — Multi-Agent Orchestration
+Specialized agents အများကြီးကို role ခွဲပြီး full workflow တစ်ခုအဖြစ်စီမံနိုင်တယ်။
+```
+
+Part 2 ရဲ့အရေးကြီးဆုံး takeaway—
+
+```text
+AI coding tool တွေကို “တစ်ခုတည်းသော magic tool” လို့မကြည့်ပါနဲ့။
+အဆင့်လိုက် capability, risk, workflow, human responsibility ကိုခွဲမြင်ပါ။
+```
+
+Level တက်လာလေ power ကြီးလာတယ်။ Power ကြီးလာလေ—
+
+```text
+scope control
+permission control
+verification
+Git review
+human approval
+```
+
+ပိုအရေးကြီးလာတယ်။
+
+---
+
+# 29. Chapter Summary
+
+ဒီအခန်းမှာ **Level 5 — Multi-Agent Orchestration** ကိုလေ့လာခဲ့တယ်။
+
+အရေးကြီးဆုံး mental model—
+
+```text
+Multi-Agent Orchestration = AI developer တစ်ယောက်တည်းမဟုတ်ဘဲ AI team တစ်ခုကို role ခွဲစီမံခြင်း
+```
+
+Level 5 roles—
+
+```text
+Coordinator
+Planner
+SPEC Maintainer
+Frontend Developer
+Backend Developer
+PWA Developer
+Admin Developer
+Test Engineer
+Verifier
+Auditor
+Deployer
+```
+
+Level 5 ကိုသုံးသင့်တဲ့နေရာ—
+
+```text
+Full-stack features
+Large codebase onboarding
+Release readiness
+Multi-concern PR review
+SPEC-driven workflow
+Verification/audit separation
+```
+
+Level 5 မှာသတိထားရမယ့်အရာ—
+
+```text
+Coordination overhead
+Conflicting outputs
+Duplicate work
+Cost/token increase
+Context mismatch
+File conflicts
+False confidence
+```
+
+အရေးကြီးဆုံး rule—
+
+```text
+Developer agent ရေးတဲ့ code ကို Verifier နဲ့စစ်ပါ။
+Verifier pass ဖြစ်တာကို Auditor နဲ့ risk စစ်ပါ။
+Coordinator က result စုစည်းပါ။
+Human က final decision ယူပါ။
+```
+

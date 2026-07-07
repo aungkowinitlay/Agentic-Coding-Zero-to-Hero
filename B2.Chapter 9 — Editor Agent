@@ -1,0 +1,1617 @@
+# Chapter 9 — Level 2: Editor Agent
+
+## 1. Learning Objectives
+
+ဒီအခန်းပြီးသွားရင် သင်က အောက်ပါအရာတွေကို နားလည်ရပါမယ်။
+
+```text
+[ ] Level 2: Editor Agent ဆိုတာဘာလဲ ရှင်းပြနိုင်မယ်
+[ ] AI Autocomplete နဲ့ Editor Agent ကွာခြားချက်သိမယ်
+[ ] Editor Agent ကို file-level / selection-level edit အတွက်သုံးနိုင်မယ်
+[ ] “Ask mode” နဲ့ “Edit mode” ကွာခြားချက်ကိုနားလည်မယ်
+[ ] Working set / selected files ဆိုတာဘာလဲ သိမယ်
+[ ] Editor Agent ရဲ့ proposed changes ကို diff အနေနဲ့ review လုပ်နိုင်မယ်
+[ ] Accept / Reject / Edit manually workflow ကိုနားလည်မယ်
+[ ] Editor Agent ကို scope မကျော်အောင် ခိုင်းတတ်မယ်
+[ ] Agent ပြင်ထားတဲ့ code ကို Git diff နဲ့ပြန်စစ်တတ်မယ်
+[ ] Level 2 က CLI Agent / Coding Agent မဟုတ်သေးကြောင်းနားလည်မယ်
+```
+
+ဒီအခန်းက Level 1 ထက်တစ်ဆင့်မြင့်ပါတယ်။ Level 1 မှာ AI က line/block suggestion ပေးတယ်။ Level 2 မှာတော့ AI က editor ထဲက file တစ်ခု သို့မဟုတ် files အနည်းငယ်ကို context အဖြစ်ယူပြီး **ပြင်ဆင်ချက်တွေကို propose / apply** လုပ်နိုင်လာတယ်။
+
+GitHub Copilot docs မှာ “Edit mode” ကို user က working set ထဲဖိုင်တွေရွေးပြီး Copilot က controlled edits propose လုပ်တဲ့ mode အဖြစ်ဖော်ပြထားပြီး user က suggested edits တွေကို accept/discard လုပ်နိုင်တယ်လို့ ရေးထားပါတယ်။ အဲဒီ docs ထဲမှာ Agent mode ကတော့ task ကို autonomously accomplish လုပ်နိုင်ပြီး files/terminal commands တွေကိုဆုံးဖြတ်နိုင်တဲ့အဆင့်အဖြစ်ခွဲထားပါတယ်။ ဒီ course မှာ Level 2 ကို **controlled editor edit** အဆင့်အဖြစ် သင်မယ်။ ([GitHub Docs][1])
+
+---
+
+## 2. Beginner Explanation
+
+Level 0 မှာ—
+
+```text
+ChatGPT က code block ပေးတယ်
+User က copy-paste လုပ်တယ်
+```
+
+Level 1 မှာ—
+
+```text
+Editor ထဲမှာ AI autocomplete suggestion ပေးတယ်
+User က Tab နှိပ်ပြီး accept/edit/reject လုပ်တယ်
+```
+
+Level 2 မှာ—
+
+```text
+User က editor ထဲမှာ file တစ်ခု သို့မဟုတ် files အနည်းငယ်ကို AI ကို context အဖြစ်ပေးတယ်
+AI က “ဒီ file ကို ဒီလိုပြင်ပါ” ဆိုတဲ့ edit ကို propose လုပ်တယ်
+User က diff ကြည့်ပြီး accept/reject လုပ်တယ်
+```
+
+ဥပမာ—
+
+```text
+apps/web/src/pages/RegisterPage.jsx ကိုဖွင့်ထားတယ်။
+Code block တစ်ခုကို select လုပ်ထားတယ်။
+Editor Agent ကို “phone validation error message ကို မြန်မာလိုပြင်ပါ” လို့ခိုင်းတယ်။
+Agent က selected code ကိုပြင်ထားတဲ့ diff ပြတယ်။
+User က accept/reject လုပ်တယ်။
+```
+
+ဒီ flow ကို အလွယ်ဆုံး diagram နဲ့ပြရင်—
+
+```text
+User selects file/code
+   ↓
+User asks Editor Agent
+   ↓
+Agent proposes file edits
+   ↓
+User reviews diff
+   ↓
+User accepts / rejects / edits manually
+   ↓
+User runs test/build
+   ↓
+User commits with Git
+```
+
+ဒီနေရာမှာ အရေးကြီးတာက **Editor Agent က driver မဟုတ်သေးဘူး။ User က driver ဖြစ်နေဆဲ** ဆိုတာပါ။
+
+---
+
+# 3. Level 2 ဆိုတာဘာလဲ
+
+Level 2: Editor Agent ဆိုတာ—
+
+```text
+Code editor ထဲမှာ current file, selected code, opened files, သတ်မှတ်ထားတဲ့ working set ကို context အဖြစ်ယူပြီး code ပြင်ပေးနိုင်တဲ့ AI assistant
+```
+
+ပါ။
+
+Level 2 မှာ AI က—
+
+```text
+[✓] selected code ကိုရှင်းပြနိုင်တယ်
+[✓] current file ကို refactor လုပ်နိုင်တယ်
+[✓] selected function ကို bug fix လုပ်နိုင်တယ်
+[✓] form validation message ပြင်နိုင်တယ်
+[✓] CSS class names ပြင်နိုင်တယ်
+[✓] small multi-file edit propose လုပ်နိုင်တယ်
+[✓] diff အနေနဲ့ changes ပြနိုင်တယ်
+```
+
+ဒါပေမယ့် Level 2 မှာ AI က များသောအားဖြင့်—
+
+```text
+[✗] project တစ်ခုလုံးကို autonomous plan/run/test loop မလုပ်သင့်သေး
+[✗] terminal command run ကို user approval မရှိဘဲမလုပ်သင့်
+[✗] feature ကြီးတစ်ခုလုံးကို file အများကြီးပြင်ပြီးတာဝန်ယူမလုပ်သင့်
+[✗] deployment/database/destructive action မလုပ်သင့်
+```
+
+Tool တချို့မှာ Level 2 နဲ့ Level 3/4 feature တွေ ပေါင်းနေတတ်ပါတယ်။ ဥပမာ modern editor tools တွေမှာ edit mode, agent mode, terminal tool, MCP tool စတာတွေပါလာနိုင်တယ်။ သို့သော် ဒီ course မှာ learning boundary အနေနဲ့ Level 2 ကို **editor-centered, user-scoped, reviewable file edits** အဆင့်အဖြစ်သတ်မှတ်မယ်။
+
+---
+
+# 4. Level 1 vs Level 2
+
+| အချက်       | Level 1: AI Autocomplete                        | Level 2: Editor Agent                     |
+| ----------- | ----------------------------------------------- | ----------------------------------------- |
+| AI output   | Inline suggestion / ghost text                  | Proposed file edits / diff                |
+| User action | Code ရေးနေစဉ် suggestion ကို accept/edit/reject | Prompt ရေးပြီး file edit ခိုင်း           |
+| Context     | Nearby code / current line                      | Current file, selected code, working set  |
+| Scope       | Line/block အဆင့်                                | Function/file/small multi-file အဆင့်      |
+| Review      | Suggestion ကိုဖတ်ပြီးဆုံးဖြတ်                   | Diff ကြည့်ပြီး accept/reject              |
+| Best use    | repetitive code, small helper                   | refactor, bug fix, small UI change        |
+| Risk        | wrong line accepted                             | wrong file / scope creep / hidden changes |
+| User role   | driver + reviewer                               | task owner + diff reviewer                |
+
+Level 1 မှာ AI က “နောက်တစ်ကြောင်း” ကိုခန့်မှန်းပေးတယ်။ Level 2 မှာ AI က “ဒီဖိုင်ကို ဒီလိုပြင်မယ်” ဆိုတဲ့ change set ကို propose လုပ်နိုင်တယ်။
+
+---
+
+# 5. Ask Mode နဲ့ Edit Mode
+
+Editor Agent tools တွေမှာ အများအားဖြင့် mode ၂ မျိုးကိုတွေ့နိုင်တယ်။
+
+```text
+Ask Mode
+Edit Mode
+```
+
+## 5.1 Ask Mode
+
+Ask Mode မှာ Agent က code ကိုရှင်းပြပေးတယ်။ File မပြင်ဘူး။
+
+သုံးသင့်တဲ့အချိန်—
+
+```text
+- ဒီ file ကဘာလုပ်တာလဲ သိချင်
+- bug ဖြစ်နိုင်တဲ့ root cause ရှာချင်
+- refactor plan တောင်းချင်
+- code review လုပ်ခိုင်းချင်
+- test cases အကြံပြုခိုင်းချင်
+```
+
+Prompt—
+
+```text
+ဒီ file ကို beginner နားလည်အောင်ရှင်းပြပါ။
+Code မပြင်ပါနဲ့။
+```
+
+## 5.2 Edit Mode
+
+Edit Mode မှာ Agent က code ကိုပြင်ဖို့ proposed edits ပေးတယ်။ User က diff ကို review လုပ်ပြီး accept/reject လုပ်ရတယ်။
+
+သုံးသင့်တဲ့အချိန်—
+
+```text
+- selected function ကို minimal bug fix လုပ်ချင်
+- label text / error message ပြင်ချင်
+- CSS class cleanup လုပ်ချင်
+- small component refactor လုပ်ချင်
+- form validation logic ကိုအနည်းငယ်ပြင်ချင်
+```
+
+Prompt—
+
+```text
+ဒီ selected function ကိုပဲပြင်ပါ။
+Phone input empty ဖြစ်ရင် “ဖုန်းနံပါတ်ဖြည့်ပါ” ပြပါ။
+တခြား behavior မပြောင်းပါနဲ့။
+```
+
+GitHub docs အရ Copilot Edit mode မှာ user က working set ထဲဖိုင်တွေထည့်ပြီး prompt ပေးနိုင်တယ်၊ Copilot က working set ထဲက files တွေကိုပြင်ဖို့ change description ပေးတယ်၊ user က changes တွေကို review လုပ်ပြီး file အလိုက် accept/discard လုပ်နိုင်တယ်။ ([GitHub Docs][1])
+
+---
+
+# 6. Working Set ဆိုတာဘာလဲ
+
+Working set ဆိုတာ Editor Agent ကို “ဒီဖိုင်တွေကိုပဲ context / edit target အဖြစ်သုံးပါ” လို့ညွှန်တဲ့ file list ပါ။
+
+ဥပမာ Event Registration bug fix အတွက် working set—
+
+```text
+apps/web/src/pages/RegisterPage.jsx
+packages/shared/src/validators/registration.js
+```
+
+မထည့်သင့်သေးတဲ့ files—
+
+```text
+services/api/**
+apps/admin/**
+apps/checkin-pwa/**
+deployment files
+.env
+```
+
+Working set ကောင်းရင် Agent scope မကျော်ဘူး။ Working set မကောင်းရင် Agent က project တစ်ခုလုံးကိုထင်သလိုပြင်သွားနိုင်တယ်။
+
+Prompt—
+
+```text
+Working set ထဲမှာ ဒီ files ၂ ခုပဲသုံးပါ။
+
+Allowed:
+- apps/web/src/pages/RegisterPage.jsx
+- packages/shared/src/validators/registration.js
+
+Do not edit:
+- services/api/**
+- apps/admin/**
+- apps/checkin-pwa/**
+- package.json
+- .env
+
+Task:
+Phone validation error message ကိုမြန်မာလိုပြင်ပါ။
+```
+
+---
+
+# 7. Diff Review ဆိုတာဘာလဲ
+
+Editor Agent ရဲ့အကြီးဆုံးအားသာချက်တစ်ခုက proposed changes ကို diff အနေနဲ့မြင်နိုင်တာပါ။
+
+Diff ဆိုတာ—
+
+```text
+အရင် code နဲ့ နောက် code ကြားကပြောင်းလဲမှု
+```
+
+ပါ။
+
+Diff ထဲမှာ များသောအားဖြင့်—
+
+```text
+- ဖျက်ထားတဲ့ line
++ ထည့်ထားတဲ့ line
+```
+
+လိုပုံစံနဲ့မြင်ရတယ်။
+
+ဥပမာ—
+
+```diff
+- return "Phone is required";
++ return "ဖုန်းနံပါတ်ဖြည့်ပါ။";
+```
+
+Diff review မှာစစ်ရမယ့်အချက်—
+
+```text
+[ ] Task scope ထဲက file ပဲပြင်ထားလား
+[ ] မလိုအပ်တဲ့ import/package ပါလာလား
+[ ] Logic မပြောင်းသင့်တာပြောင်းသွားလား
+[ ] Error message text မှန်လား
+[ ] Formatting မပျက်လား
+[ ] Secret/API key မပါလား
+[ ] Test/update လိုလား
+```
+
+Devin Desktop / Cascade docs မှာ agent edits တွေကို inline highlighted diff zones အနေနဲ့ပြပြီး hunk တစ်ခုချင်းစီကို accept/reject controls နဲ့ review လုပ်နိုင်တယ်လို့ဖော်ပြထားပါတယ်။ ([Devin Docs][2])
+
+---
+
+# 8. Level 2 ကို ဘယ်အချိန်သုံးသင့်လဲ
+
+## 8.1 Selected Code ကိုရှင်းပြချင်တဲ့အခါ
+
+Prompt—
+
+```text
+ဒီ selected code ကို beginner နားလည်အောင်ရှင်းပြပါ။
+Code မပြင်ပါနဲ့။
+```
+
+## 8.2 Small Bug Fix
+
+Prompt—
+
+```text
+ဒီ function မှာ spaces-only name ကို valid လို့ယူနေပါတယ်။
+Minimal fix လုပ်ပါ။
+Function name မပြောင်းပါနဲ့။
+Test cases ၃ ခုအကြံပြုပါ။
+```
+
+## 8.3 UI Text ပြင်ခြင်း
+
+Prompt—
+
+```text
+ဒီ form ထဲက validation messages တွေကို မြန်မာလိုပြင်ပါ။
+Logic မပြောင်းပါနဲ့။
+```
+
+## 8.4 Small Refactor
+
+Prompt—
+
+```text
+ဒီ file ထဲက duplicated validation logic ကို helper function အဖြစ်ခွဲပါ။
+တခြား file မပြင်ပါနဲ့။
+Behavior မပြောင်းရပါ။
+```
+
+## 8.5 CSS Cleanup
+
+Prompt—
+
+```text
+style.css ထဲက registration form CSS ကိုပိုဖတ်လွယ်အောင် organize လုပ်ပါ။
+Class names မပြောင်းပါနဲ့။
+Visual behavior မပြောင်းရပါ။
+```
+
+---
+
+# 9. Level 2 ကို ဘယ်အချိန်သတိထားသင့်လဲ
+
+## 9.1 Multi-file Feature ကြီး
+
+```text
+Registration feature အကုန်ဆောက်ပါ
+```
+
+လို task က Level 2 အတွက်ကြီးနိုင်တယ်။ Level 3/4 planning + testing workflow လိုနိုင်တယ်။
+
+## 9.2 package.json ပြင်ခြင်း
+
+Editor Agent က package install မလိုဘဲ package.json ထဲ dependency ထည့်ချင်နိုင်တယ်။ သတိထားပါ။
+
+Prompt—
+
+```text
+package.json မပြင်ပါနဲ့။
+Package install မလိုတဲ့ solution ပဲပေးပါ။
+```
+
+## 9.3 Backend + Frontend + Database တပြိုင်နက်
+
+```text
+Frontend form, backend API, database migration အကုန်ပြင်ပါ
+```
+
+ဒါက Level 2 အတွက် scope ကြီးလွန်းတယ်။
+
+## 9.4 Security-sensitive code
+
+```text
+auth
+password
+token
+admin permissions
+database delete
+payment
+deployment secrets
+```
+
+တွေကို Editor Agent နဲ့ small review လုပ်လို့ရပေမယ့် edit ကို accept မလုပ်ခင် verifier/auditor workflow လိုတယ်။
+
+## 9.5 Hidden file / secret file
+
+```text
+.env
+.env.local
+private key
+token file
+```
+
+တွေကို Editor Agent context ထဲမထည့်ပါနဲ့။
+
+---
+
+# 10. Editor Agent Prompt Anatomy
+
+Editor Agent prompt ကောင်းတစ်ခုမှာ အောက်ပါအပိုင်းတွေပါသင့်တယ်။
+
+```text
+1. Mode
+2. Scope
+3. Allowed files
+4. Do not edit
+5. Task
+6. Constraints
+7. Verification
+8. Review request
+```
+
+ဥပမာ—
+
+```text
+Mode:
+Edit mode သုံးပါ။
+
+Scope:
+Small bug fix only.
+
+Allowed file:
+apps/web/src/pages/RegisterPage.jsx
+
+Do not edit:
+- package.json
+- services/api/**
+- apps/admin/**
+- .env
+
+Task:
+Phone field empty ဖြစ်ရင် “ဖုန်းနံပါတ်ဖြည့်ပါ။” message ပြပါ။
+
+Constraints:
+- Form submit behavior မပြောင်းပါနဲ့
+- API call မထည့်ပါနဲ့
+- UI layout မပြောင်းပါနဲ့
+
+Before editing:
+- ဘာ line/section ပြင်မလဲပြောပါ။
+
+After editing:
+- Diff summary ပေးပါ
+- Manual test steps ပေးပါ
+```
+
+---
+
+# 11. Ask First, Edit Later Workflow
+
+Beginner အတွက် အကောင်းဆုံး Level 2 workflow က **Ask first, edit later** ပါ။
+
+```text
+Step 1 — Ask mode
+ဒီ file ကဘာလုပ်တာလဲရှင်းပြပါ။
+Bug ဖြစ်နိုင်တဲ့နေရာကိုရှာပါ။
+Code မပြင်ပါနဲ့။
+
+Step 2 — Plan
+Minimal fix plan ပေးပါ။
+ဘယ် lines ပြင်မလဲပြောပါ။
+
+Step 3 — Edit
+Plan အတိုင်း selected file ကိုပဲပြင်ပါ။
+
+Step 4 — Review
+Diff summary ပေးပါ။
+Manual test steps ပေးပါ။
+
+Step 5 — Verify
+Browser/test/build စစ်ပါ။
+
+Step 6 — Git
+git diff review → commit
+```
+
+ဒီ workflow က Agent ကို အလွန်အကျွံလုပ်မိခြင်းကိုလျှော့စေတယ်။
+
+---
+
+# 12. Level 2 Example — Validation Message ပြင်ခြင်း
+
+Initial code—
+
+```js
+function validateRegistrationForm(formData) {
+  const name = formData.name.trim();
+  const phone = formData.phone.trim();
+
+  if (name === "") {
+    return "Name is required";
+  }
+
+  if (phone === "") {
+    return "Phone is required";
+  }
+
+  return null;
+}
+```
+
+Editor Agent prompt—
+
+```text
+ဒီ function ကိုပဲပြင်ပါ။
+Validation message တွေကို မြန်မာလိုပြောင်းပါ။
+Logic မပြောင်းပါနဲ့။
+Function name မပြောင်းပါနဲ့။
+```
+
+Expected diff—
+
+```diff
+-    return "Name is required";
++    return "နာမည်ဖြည့်ပါ။";
+
+-    return "Phone is required";
++    return "ဖုန်းနံပါတ်ဖြည့်ပါ။";
+```
+
+Review checklist—
+
+```text
+[ ] Function name မပြောင်း
+[ ] Logic မပြောင်း
+[ ] Message text ပဲပြောင်း
+[ ] မြန်မာစာမှန်
+[ ] Tests/manual steps လိုလား
+```
+
+---
+
+# 13. Level 2 Example — Small Refactor
+
+Initial code—
+
+```js
+function validateRegistrationForm(formData) {
+  const name = formData.name.trim();
+  const phone = formData.phone.trim();
+
+  if (name === "") {
+    return "နာမည်ဖြည့်ပါ။";
+  }
+
+  if (phone === "") {
+    return "ဖုန်းနံပါတ်ဖြည့်ပါ။";
+  }
+
+  return null;
+}
+```
+
+Prompt—
+
+```text
+ဒီ validation function ထဲက empty string check ကို helper function အဖြစ်ခွဲပါ။
+Behavior မပြောင်းပါနဲ့။
+File တစ်ဖိုင်ထဲပဲပြင်ပါ။
+```
+
+Possible output—
+
+```js
+function isBlank(value) {
+  return value.trim() === "";
+}
+
+function validateRegistrationForm(formData) {
+  if (isBlank(formData.name)) {
+    return "နာမည်ဖြည့်ပါ။";
+  }
+
+  if (isBlank(formData.phone)) {
+    return "ဖုန်းနံပါတ်ဖြည့်ပါ။";
+  }
+
+  return null;
+}
+```
+
+Review လုပ်ရမယ့်အချက်—
+
+```text
+[ ] formData.name undefined ဖြစ်နိုင်လား
+[ ] helper function name ရှင်းလား
+[ ] behavior တကယ်မပြောင်းဘူးလား
+[ ] test cases ရှိလား
+```
+
+ပို robust ဖြစ်ချင်ရင်—
+
+```js
+function isBlank(value) {
+  return String(value ?? "").trim() === "";
+}
+```
+
+Editor Agent suggestion ကို **accept လုပ်ပြီးပြန်စစ်ခြင်း** က Level 2 ရဲ့ core skill ပါ။
+
+---
+
+# 14. Level 2 Example — CSS Only Edit
+
+Prompt—
+
+```text
+style.css ကိုပဲပြင်ပါ။
+Registration form card ကို mobile-friendly ဖြစ်အောင် spacing ပိုကောင်းအောင်ပြင်ပါ။
+
+Do not edit:
+- index.html
+- app.js
+
+Do not change:
+- class names
+- form behavior
+- JavaScript selectors
+```
+
+Good output ဖြစ်သင့်တာ—
+
+```text
+CSS spacing / layout ပဲပြောင်း
+HTML id/class မပြောင်း
+JS file မထိ
+```
+
+Bad output—
+
+```text
+class names ပြောင်းသွားပြီး app.js selector မကိုက်တော့
+```
+
+Review checklist—
+
+```text
+[ ] style.css တစ်ဖိုင်ပဲပြင်ထားလား
+[ ] class names မပြောင်းထားလား
+[ ] JavaScript selector ပျက်နိုင်လား
+[ ] mobile view စမ်းပြီးလား
+```
+
+---
+
+# 15. Level 2 ရဲ့ အားသာချက်များ
+
+## 15.1 Copy-paste ထက်ပိုလုံခြုံတယ်
+
+Level 0 မှာ code block ကို user က copy-paste လုပ်ရတယ်။ Level 2 မှာ editor agent က relevant file ထဲမှာ proposed edit ပြနိုင်လို့ diff review လုပ်ရလွယ်တယ်။
+
+## 15.2 Context ပိုသိတယ်
+
+Editor Agent က current file, selected code, opened files, working set တွေကို context အဖြစ်သုံးနိုင်တယ်။
+
+## 15.3 Small refactor အတွက်ကောင်းတယ်
+
+Function rename, repeated logic extract, error message cleanup, CSS cleanup စတဲ့ task တွေမှာအသုံးဝင်တယ်။
+
+## 15.4 Beginner learning အတွက်ကောင်းတယ်
+
+Agent ကို “ဘာပြင်ခဲ့လဲရှင်းပြပါ” လို့မေးပြီး diff နဲ့ code explanation ကိုတွဲလေ့လာနိုင်တယ်။
+
+## 15.5 Reviewable changes
+
+Editor-integrated tools တွေက proposed edits ကို side-by-side diff သို့မဟုတ် inline diff zones အနေနဲ့ပြနိုင်တတ်လို့ user က accept/reject လုပ်ရလွယ်တယ်။ GitHub Copilot docs မှာ Edit mode မှာ suggested edits တွေကို file အလိုက် review လုပ်ပြီး accept/discard လုပ်နိုင်တယ်လို့ဖော်ပြထားပြီး Devin Desktop docs မှာလည်း diff zones မှာ hunk အလိုက် accept/reject controls ပါကြောင်းဖော်ပြထားပါတယ်။ ([GitHub Docs][1])
+
+---
+
+# 16. Level 2 ရဲ့ အားနည်းချက်များ
+
+## 16.1 Scope creep ဖြစ်နိုင်တယ်
+
+Prompt မရှင်းရင် Agent က file တစ်ခုထက်ပိုပြင်နိုင်တယ်။
+
+## 16.2 Context မပြည့်စုံနိုင်
+
+Working set ထဲမပါသော file က requirement သို့မဟုတ် shared logic ကို Agent မမြင်နိုင်နိုင်တယ်။
+
+## 16.3 Tests မ run ဖြစ်နိုင်
+
+Editor Agent က edit propose လုပ်နိုင်ပေမယ့် test/build ကို user မ run ရင် “တကယ်အလုပ်လုပ်လား” မသိနိုင်။
+
+## 16.4 Hidden behavior ပျက်နိုင်
+
+CSS class name ပြောင်းတာက JavaScript selector ကိုပျက်စေနိုင်တယ်။
+
+## 16.5 User က diff မဖတ်ရင် အန္တရာယ်များ
+
+Diff review မလုပ်ဘဲ accept all လုပ်တာက Level 2 ရဲ့အကြီးဆုံးအန္တရာယ်ပါ။
+
+---
+
+# 17. Beginner Safety Rules for Editor Agent
+
+```text
+Rule 1 — Ask mode နဲ့စပါ။
+Rule 2 — Edit mode မသုံးခင် allowed files သတ်မှတ်ပါ။
+Rule 3 — “Do not edit” list ထည့်ပါ။
+Rule 4 — File ၁–၂ ဖိုင်အထိပဲစတင်ပါ။
+Rule 5 — package.json, .env, deployment files မထိခိုင်းပါနဲ့။
+Rule 6 — Diff ကိုအမြဲဖတ်ပါ။
+Rule 7 — Accept all မလုပ်ခင် hunk တစ်ခုချင်းစီစစ်ပါ။
+Rule 8 — Manual test steps တောင်းပါ။
+Rule 9 — Git diff နဲ့ထပ်စစ်ပါ။
+Rule 10 — Commit မလုပ်ခင် summary တောင်းပါ။
+```
+
+---
+
+# 18. Step-by-step Lab
+
+ဒီ lab မှာ Editor Agent tool ရှိရင် real edit mode နဲ့လုပ်ပါ။ Tool မရှိသေးရင် “simulated editor agent” အနေနဲ့ prompt + manual diff review လုပ်နိုင်ပါတယ်။
+
+## Lab Goal
+
+```text
+Editor Agent ကို selected file တစ်ခုအတွက် small edit ခိုင်းပြီး diff review လုပ်နိုင်မယ်။
+```
+
+## Folder Structure
+
+```text
+agentic-zero-to-hero/
+└── playground/
+    └── chapter-9-editor-agent/
+        ├── index.html
+        ├── style.css
+        └── app.js
+```
+
+---
+
+## Step 1 — Folder ဆောက်ပါ
+
+macOS/Linux/Git Bash—
+
+```bash
+cd ~/Desktop/agentic-zero-to-hero
+mkdir -p playground/chapter-9-editor-agent
+cd playground/chapter-9-editor-agent
+touch index.html style.css app.js
+```
+
+Windows PowerShell—
+
+```powershell
+cd ~/Desktop/agentic-zero-to-hero
+mkdir playground/chapter-9-editor-agent
+cd playground/chapter-9-editor-agent
+New-Item index.html
+New-Item style.css
+New-Item app.js
+```
+
+---
+
+## Step 2 — Starter Files ထည့်ပါ
+
+### index.html
+
+```html
+<!DOCTYPE html>
+<html lang="my">
+  <head>
+    <meta charset="UTF-8">
+    <title>Editor Agent Practice</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+
+  <body>
+    <main class="page">
+      <section class="card">
+        <h1>Editor Agent Practice</h1>
+        <p>Registration form validation ကို Editor Agent နဲ့ပြင်မည်။</p>
+
+        <form id="registration-form">
+          <label for="name">နာမည်</label>
+          <input id="name" name="name" type="text">
+
+          <label for="phone">ဖုန်းနံပါတ်</label>
+          <input id="phone" name="phone" type="tel">
+
+          <button type="submit">Register လုပ်မည်</button>
+        </form>
+
+        <p id="message" class="message"></p>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
+```
+
+### style.css
+
+```css
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.card {
+  width: 100%;
+  max-width: 480px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 24px;
+}
+
+label {
+  display: block;
+  margin-top: 16px;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+input,
+button {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 16px;
+}
+
+input {
+  border: 1px solid #d1d5db;
+}
+
+button {
+  margin-top: 20px;
+  border: none;
+  background: #2563eb;
+  color: white;
+  font-weight: 700;
+}
+
+.message {
+  margin-top: 16px;
+  font-weight: 700;
+}
+
+.message.error {
+  color: #b91c1c;
+}
+
+.message.success {
+  color: #15803d;
+}
+```
+
+### app.js
+
+```js
+function validateRegistrationForm(formData) {
+  if (!formData.name) {
+    return "Name is required";
+  }
+
+  if (!formData.phone) {
+    return "Phone is required";
+  }
+
+  return null;
+}
+
+const form = document.querySelector("#registration-form");
+const nameInput = document.querySelector("#name");
+const phoneInput = document.querySelector("#phone");
+const message = document.querySelector("#message");
+
+form.addEventListener("submit", function (event) {
+  event.preventDefault();
+
+  const formData = {
+    name: nameInput.value,
+    phone: phoneInput.value
+  };
+
+  const errorMessage = validateRegistrationForm(formData);
+
+  message.className = "message";
+
+  if (errorMessage) {
+    message.textContent = errorMessage;
+    message.classList.add("error");
+    return;
+  }
+
+  message.textContent = "Registration successful";
+  message.classList.add("success");
+});
+```
+
+---
+
+## Step 3 — Ask Mode နဲ့အရင်ရှင်းခိုင်းပါ
+
+Editor Agent ကို `app.js` file context နဲ့မေးပါ။
+
+Prompt—
+
+```text
+ဒီ app.js file ကို beginner နားလည်အောင်ရှင်းပြပါ။
+Code မပြင်ပါနဲ့။
+
+အထူးသဖြင့်:
+- validateRegistrationForm function ဘာလုပ်တာလဲ
+- form submit flow ဘယ်လိုအလုပ်လုပ်လဲ
+- မြန်မာ UI အတွက် ဘာတွေပြင်သင့်လဲ
+- edge case ဘာရှိလဲ
+```
+
+Expected answer ထဲမှာ Agent က—
+
+```text
+Name/phone validation messages English ဖြစ်နေတယ်
+Spaces-only input ကိုစစ်မထားဘူး
+Success message English ဖြစ်နေတယ်
+```
+
+လိုတွေပြောသင့်တယ်။
+
+---
+
+## Step 4 — Edit Mode Prompt ပေးပါ
+
+Prompt—
+
+```text
+Edit mode သုံးပါ။
+
+Allowed file:
+app.js
+
+Do not edit:
+- index.html
+- style.css
+- package.json
+- .env
+
+Task:
+Validation messages နဲ့ success message ကို မြန်မာလိုပြင်ပါ။
+Spaces-only input ကို invalid အဖြစ်စစ်ပါ။
+
+Constraints:
+- Function name မပြောင်းပါနဲ့
+- DOM selectors မပြောင်းပါနဲ့
+- Form submit flow မပြောင်းပါနဲ့
+- API call မထည့်ပါနဲ့
+
+After editing:
+- Diff summary ပေးပါ
+- Manual test cases ၄ ခုရေးပါ
+```
+
+---
+
+## Step 5 — Proposed Diff ကို Review လုပ်ပါ
+
+Expected important changes—
+
+```diff
+-  if (!formData.name) {
++  const name = formData.name.trim();
++  const phone = formData.phone.trim();
++
++  if (name === "") {
+-    return "Name is required";
++    return "နာမည်ဖြည့်ပါ။";
+   }
+
+-  if (!formData.phone) {
+-    return "Phone is required";
++  if (phone === "") {
++    return "ဖုန်းနံပါတ်ဖြည့်ပါ။";
+   }
+
+-  message.textContent = "Registration successful";
++  message.textContent = "Registration အောင်မြင်ပါသည်။";
+```
+
+Review checklist—
+
+```text
+[ ] app.js တစ်ဖိုင်ပဲပြင်ထားလား
+[ ] index.html/style.css မပြင်ထားဘူးလား
+[ ] trim() ပါလား
+[ ] English messages မြန်မာလိုဖြစ်သွားလား
+[ ] DOM selectors မပြောင်းထားလား
+[ ] API call မထည့်ထားလား
+```
+
+---
+
+## Step 6 — Browser မှာ Manual Test လုပ်ပါ
+
+`index.html` ကို browser မှာဖွင့်ပါ။
+
+Test cases—
+
+```text
+1. Name empty, phone empty → နာမည်ဖြည့်ပါ။
+2. Name spaces only, phone filled → နာမည်ဖြည့်ပါ။
+3. Name filled, phone empty → ဖုန်းနံပါတ်ဖြည့်ပါ။
+4. Name filled, phone filled → Registration အောင်မြင်ပါသည်။
+```
+
+---
+
+## Step 7 — Git diff စစ်ပါ
+
+Project root ကိုပြန်သွားပါ။
+
+```bash
+cd ~/Desktop/agentic-zero-to-hero
+git status
+git diff playground/chapter-9-editor-agent/app.js
+```
+
+စစ်ရန်—
+
+```text
+app.js ပဲပြင်ထားလား?
+မလိုအပ်တဲ့ files ပါသွားလား?
+```
+
+Commit—
+
+```bash
+git add playground/chapter-9-editor-agent/
+git commit -m "add level 2 editor agent practice"
+```
+
+---
+
+# 19. Lab Reflection
+
+Lab note ထဲမှာ ဒီလိုရေးပါ။
+
+```md
+# Chapter 9 Lab — Editor Agent
+
+## Task
+app.js ထဲက validation messages ကို မြန်မာလိုပြင်ပြီး spaces-only input ကို invalid အဖြစ်စစ်သည်။
+
+## Files allowed
+- app.js
+
+## Files not allowed
+- index.html
+- style.css
+- package.json
+- .env
+
+## What the Editor Agent changed
+- English validation messages ကို မြန်မာလိုပြောင်းသည်
+- name/phone values ကို trim() လုပ်သည်
+- success message ကို မြန်မာလိုပြောင်းသည်
+
+## Manual test cases
+1. Empty name
+2. Spaces-only name
+3. Empty phone
+4. Valid name + phone
+
+## Lesson
+Editor Agent ကို scope သတ်မှတ်ပြီးခိုင်းရင် small file edit အတွက်အသုံးဝင်သည်။
+Diff ကိုမဖတ်ဘဲ accept မလုပ်ရ။
+```
+
+---
+
+# 20. Copy-paste Prompts
+
+## 20.1 Ask Mode File Explanation Prompt
+
+```text
+ဒီ file ကို beginner နားလည်အောင်ရှင်းပြပါ။
+Code မပြင်ပါနဲ့။
+
+ပြန်ပေးရန်:
+- File purpose
+- Main functions/components
+- Data flow
+- User action flow
+- Bug risk ဖြစ်နိုင်တဲ့နေရာ
+- ပထမဆုံးပြင်သင့်တဲ့ small improvement
+```
+
+---
+
+## 20.2 Editor Agent Safe Edit Prompt
+
+```text
+Edit mode သုံးပါ။
+
+Allowed files:
+- [file path]
+
+Do not edit:
+- package.json
+- package-lock.json
+- .env
+- node_modules/**
+- dist/**
+- တခြား files
+
+Task:
+[small edit task]
+
+Constraints:
+- Minimal change ပဲလုပ်ပါ
+- Existing behavior မပြောင်းပါနဲ့, unless specified
+- New dependency မထည့်ပါနဲ့
+- API call မထည့်ပါနဲ့
+
+Before editing:
+- ဘာပြင်မလဲ plan တိုတိုပြပါ။
+
+After editing:
+- Diff summary ပေးပါ
+- Manual test steps ပေးပါ
+```
+
+---
+
+## 20.3 Diff Review Prompt
+
+```text
+Editor Agent က အောက်ပါ changes တွေ propose လုပ်ထားပါတယ်။
+Code မပြင်ပါနဲ့။
+Diff review ပေးပါ။
+
+စစ်ရန်:
+- Scope ထဲပါလား
+- မလိုအပ်တဲ့ files ပြင်ထားလား
+- Logic မလိုအပ်ဘဲပြောင်းထားလား
+- Security/privacy risk ရှိလား
+- Package import အသစ်ပါလား
+- Accept / Reject / Edit manually recommendation ပေးပါ
+
+Diff:
+[paste diff]
+```
+
+---
+
+## 20.4 Scope Control Prompt
+
+```text
+ဒီ task ကို Level 2 Editor Agent scope အဖြစ်လျှော့ချပါ။
+
+Original task:
+[paste task]
+
+ပြန်ပေးရန်:
+- File ၁–၂ ဖိုင်ထဲလုပ်နိုင်တဲ့ smaller task
+- Do not edit list
+- Acceptance criteria
+- Manual verification steps
+- Later scope ထဲထားရမယ့်အရာများ
+```
+
+---
+
+## 20.5 Ask Before Edit Prompt
+
+```text
+Code မပြင်ပါနဲ့။
+ပထမဆုံး diagnosis လုပ်ပါ။
+
+Bug:
+[bug description]
+
+Expected:
+[expected]
+
+Actual:
+[actual]
+
+Relevant file:
+[file path]
+
+ပြန်ပေးရန်:
+- root cause candidates
+- ဘယ် lines စစ်သင့်လဲ
+- minimal fix plan
+- edit လုပ်ဖို့ approval တောင်းပါ
+```
+
+---
+
+# 21. Expected Output
+
+ဒီအခန်းပြီးရင် learner က အောက်ပါ summary ကိုရေးနိုင်ရမယ်။
+
+```md
+# Level 2 — Editor Agent Summary
+
+## Definition
+Editor Agent ဆိုတာ editor ထဲက selected code/current file/working set ကို context အဖြစ်ယူပြီး code edits propose လုပ်နိုင်တဲ့ AI assistant ဖြစ်တယ်။
+
+## Difference from Level 1
+Level 1 က inline autocomplete suggestion ပေးတယ်။
+Level 2 က file-level edit/diff propose လုပ်တယ်။
+
+## Best For
+- Selected code explanation
+- Small bug fix
+- Small refactor
+- UI text cleanup
+- CSS-only edit
+- Validation logic improvement
+
+## Not Good For
+- Full feature implementation
+- Backend + frontend + database တပြိုင်နက်
+- Deployment action
+- Security-sensitive automation
+- Unreviewed package changes
+
+## Workflow
+Ask first → Plan → Edit selected files → Review diff → Manual test → Git diff → Commit
+
+## Rule
+Allowed files နဲ့ Do not edit list မပါဘဲ Editor Agent ကို edit မခိုင်းပါနဲ့။
+```
+
+---
+
+# 22. Common Errors
+
+## Error 1 — Ask mode မသုံးဘဲ Edit တန်းခိုင်းခြင်း
+
+မကောင်း—
+
+```text
+ဒီ file ကိုပြင်ပေး။
+```
+
+ကောင်း—
+
+```text
+ဒီ file ကိုပထမဆုံးရှင်းပြပါ။
+Bug ဖြစ်နိုင်တဲ့နေရာပြောပါ။
+Code မပြင်ပါနဲ့။
+```
+
+---
+
+## Error 2 — Allowed files မသတ်မှတ်ခြင်း
+
+မကောင်း—
+
+```text
+Registration bug fix လုပ်ပါ။
+```
+
+ပြဿနာ—
+
+```text
+Agent က frontend/backend/test files အများကြီးပြင်နိုင်တယ်။
+```
+
+ကောင်း—
+
+```text
+Allowed file:
+apps/web/src/pages/RegisterPage.jsx
+
+Do not edit:
+services/api/**
+```
+
+---
+
+## Error 3 — Accept all လုပ်ခြင်း
+
+Editor Agent proposed changes အားလုံးကိုမဖတ်ဘဲ accept all လုပ်တာ အန္တရာယ်များတယ်။
+
+ပြင်နည်း—
+
+```text
+Hunk တစ်ခုချင်းစီစစ်ပါ။
+Git diff နဲ့ထပ်စစ်ပါ။
+```
+
+---
+
+## Error 4 — CSS class rename ကြောင့် JS ပျက်ခြင်း
+
+Agent က CSS cleanup လုပ်ရင်း class/id ပြောင်းလိုက်ရင် JavaScript selector ပျက်နိုင်တယ်။
+
+Prompt rule—
+
+```text
+Class names / ids မပြောင်းပါနဲ့။
+```
+
+---
+
+## Error 5 — package.json မလိုဘဲပြင်သွားခြင်း
+
+Small edit task မှာ package.json မပြင်သင့်ပါ။
+
+Prompt rule—
+
+```text
+package.json/package-lock.json မပြင်ပါနဲ့။
+New dependency မထည့်ပါနဲ့။
+```
+
+---
+
+## Error 6 — Manual test မလုပ်ခြင်း
+
+Editor Agent ပြင်တာ diff လှနေတယ်ဆိုရုံနဲ့မလုံလောက်ပါ။
+
+Manual test လုပ်ပါ—
+
+```text
+Empty input
+Spaces-only input
+Valid input
+Browser console error
+```
+
+---
+
+# 23. Debug / Recovery
+
+## 23.1 Editor Agent က wrong file ပြင်သွားရင်
+
+Prompt—
+
+```text
+Code မပြင်သေးပါနဲ့။
+Editor Agent က scope ကျော်ပြီး file မှားပြင်ထားနိုင်ပါတယ်။
+
+လုပ်ရန်:
+- git status စစ်ပါ
+- changed files list ပေးပါ
+- allowed files ထဲမပါတဲ့ changes တွေဖော်ပြပါ
+- rollback options ပေးပါ
+- git restore command မ run ခင် approval တောင်းပါ
+```
+
+---
+
+## 23.2 Diff နားမလည်ရင်
+
+Prompt—
+
+```text
+ဒီ diff ကို beginner နားလည်အောင်ရှင်းပြပါ။
+
+ပြန်ပေးရန်:
+- ဖျက်ထားတဲ့ lines
+- ထည့်ထားတဲ့ lines
+- Behavior ဘယ်လိုပြောင်းလဲမလဲ
+- Risk ရှိလား
+- Accept သင့်လား Reject သင့်လား
+
+Diff:
+[paste diff]
+```
+
+---
+
+## 23.3 Agent ပြင်ပြီး behavior ပျက်သွားရင်
+
+စစ်ရန်—
+
+```text
+[ ] DOM selector ပြောင်းလား
+[ ] class/id rename ဖြစ်လား
+[ ] function signature ပြောင်းလား
+[ ] event listener ပျက်လား
+[ ] package import error ရှိလား
+```
+
+Prompt—
+
+```text
+Editor Agent ပြင်ပြီးနောက် behavior ပျက်သွားပါတယ်။
+Code မပြင်ခင် root cause ရှာပါ။
+
+Expected:
+[expected]
+
+Actual:
+[actual]
+
+Changed diff:
+[paste diff]
+```
+
+---
+
+## 23.4 Changes ကို rollback လုပ်ချင်ရင်
+
+Specific file rollback—
+
+```bash
+git restore playground/chapter-9-editor-agent/app.js
+```
+
+မ run ခင် Agent ကိုရှင်းခိုင်းပါ—
+
+```text
+ဒီ git restore command ကဘာလုပ်မလဲရှင်းပြပါ။
+ဘယ် changes ဆုံးရှုံးမလဲ?
+Safe ဖြစ်လား?
+```
+
+---
+
+# 24. Verification Checklist
+
+ဒီအခန်းကို နားလည်ပြီလား စစ်ပါ။
+
+```text
+[ ] Level 2 Editor Agent ဆိုတာဘာလဲရှင်းပြနိုင်တယ်
+[ ] Level 1 AI Autocomplete နဲ့ကွာခြားချက်သိတယ်
+[ ] Ask mode နဲ့ Edit mode ကိုခွဲနိုင်တယ်
+[ ] Working set ဆိုတာဘာလဲသိတယ်
+[ ] Allowed files / Do not edit list ရေးနိုင်တယ်
+[ ] Editor Agent prompt ကို scope နဲ့ရေးနိုင်တယ်
+[ ] Diff review လုပ်နိုင်တယ်
+[ ] Accept / Reject / Edit manually ဆုံးဖြတ်နိုင်တယ်
+[ ] Small bug fix အတွက် Editor Agent သုံးနိုင်တယ်
+[ ] Multi-file large feature ကို Level 2 ထဲမထည့်သင့်ကြောင်းနားလည်တယ်
+[ ] package.json, .env, node_modules မထိခိုင်းသင့်ကြောင်းသိတယ်
+[ ] Manual test steps တောင်းသင့်ကြောင်းသိတယ်
+[ ] Git diff နဲ့ထပ်စစ်ရမယ်ဆိုတာနားလည်တယ်
+```
+
+---
+
+# 25. Mini Assignment
+
+## Assignment 1 — Level 2 Definition ရေးပါ
+
+ကိုယ်ပိုင်စကားနဲ့ရေးပါ။
+
+```text
+Level 2: Editor Agent ဆိုတာ...
+```
+
+ပါရမယ့်အချက်—
+
+```text
+- Editor ထဲမှာအလုပ်လုပ်တယ်
+- selected code/current file/working set ကို context အဖြစ်သုံးတယ်
+- code edit propose လုပ်တယ်
+- user က diff review လုပ်ပြီး accept/reject လုပ်တယ်
+```
+
+---
+
+## Assignment 2 — Ask Mode Prompt ရေးပါ
+
+`app.js` file ကို မပြင်ဘဲရှင်းပြခိုင်းမယ့် prompt ရေးပါ။
+
+ပါရမယ့်အချက်—
+
+```text
+- Code မပြင်ပါနဲ့
+- File purpose ရှင်းပါ
+- Main functions ရှင်းပါ
+- Bug risk ရှာပါ
+- Beginner-friendly explanation ပေးပါ
+```
+
+---
+
+## Assignment 3 — Safe Edit Prompt ရေးပါ
+
+Editor Agent ကို `app.js` file တစ်ဖိုင်တည်း ပြင်ခိုင်းမယ့် prompt ရေးပါ။
+
+Task—
+
+```text
+Validation messages ကိုမြန်မာလိုပြင်ပါ။
+Spaces-only input ကို invalid အဖြစ်စစ်ပါ။
+```
+
+ပါရမယ့်အချက်—
+
+```text
+- Allowed file
+- Do not edit list
+- Constraints
+- Before editing plan
+- After editing diff summary
+- Manual test cases
+```
+
+---
+
+## Assignment 4 — Diff Review လုပ်ပါ
+
+အောက်ပါ diff ကို review လုပ်ပါ။
+
+```diff
+-  if (!formData.phone) {
+-    return "Phone is required";
++  if (formData.phone.length < 5) {
++    return "Invalid phone";
+   }
+```
+
+စစ်ရန်—
+
+```text
+[ ] Requirement နဲ့ကိုက်လား
+[ ] Message မြန်မာလိုလား
+[ ] Empty phone case ကိုစစ်လား
+[ ] Phone format validation requirement မပါဘဲ logic ပြောင်းသွားလား
+[ ] Accept / Reject / Edit manually?
+```
+
+---
+
+## Assignment 5 — Level 2 vs Level 3 Table ရေးပါ
+
+Columns—
+
+```text
+Capability
+Level 2 Editor Agent
+Level 3 CLI Agent
+```
+
+Rows—
+
+```text
+Works inside editor
+Can edit selected file
+Can run terminal commands
+Can run tests/build
+Can inspect full repo
+Best for
+Main risk
+```
+
+---
+
+## Assignment 6 — Scope Control လုပ်ပါ
+
+အောက်ပါ task ကို Level 2-friendly smaller task အဖြစ်ပြန်ရေးပါ။
+
+```text
+Event registration feature အကုန်ဆောက်ပါ။ Frontend, backend, database, admin dashboard, test အကုန်လုပ်ပါ။
+```
+
+Expected idea—
+
+```text
+Level 2 smaller task:
+apps/web/src/pages/RegisterPage.jsx ထဲက form validation messages ကိုမြန်မာလိုပြင်ပါ။
+Backend/database/admin မပြင်ပါနဲ့။
+```
+
+---
+
+# 26. Chapter Summary
+
+ဒီအခန်းမှာ **Level 2 — Editor Agent** ကိုလေ့လာခဲ့တယ်။
+
+အရေးကြီးဆုံး mental model—
+
+```text
+Editor Agent = Editor ထဲက selected file/code ကို context အဖြစ်ယူပြီး reviewable edits propose လုပ်တဲ့ AI assistant
+```
+
+Level 1 နဲ့ကွာခြားချက်—
+
+```text
+Level 1:
+AI က line/block suggestion ပေးတယ်။
+
+Level 2:
+AI က file-level edit/diff propose လုပ်တယ်။
+```
+
+Level 2 ကိုသုံးသင့်တဲ့နေရာ—
+
+```text
+Selected code explanation
+Small bug fix
+Small refactor
+Validation message cleanup
+CSS-only edit
+One-file improvement
+```
+
+Level 2 မှာသတိထားရမယ့်အရာ—
+
+```text
+Scope creep
+Wrong file edit
+Unreviewed diff
+package.json changes
+.env exposure
+Hidden behavior breakage
+```
+
+အရေးကြီးဆုံး rule—
+
+```text
+Allowed files နဲ့ Do not edit list မပါဘဲ Editor Agent ကို edit မခိုင်းပါနဲ့။
+Diff မဖတ်ဘဲ accept all မလုပ်ပါနဲ့။
+```
+

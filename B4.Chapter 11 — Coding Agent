@@ -1,0 +1,1850 @@
+# Chapter 11 — Level 4: Coding Agent
+
+## 1. Learning Objectives
+
+ဒီအခန်းပြီးသွားရင် သင်က အောက်ပါအရာတွေကို နားလည်ရပါမယ်။
+
+```text
+[ ] Level 4: Coding Agent ဆိုတာဘာလဲ ရှင်းပြနိုင်မယ်
+[ ] CLI Agent နဲ့ Coding Agent ကွာခြားချက်သိမယ်
+[ ] Coding Agent က feature တစ်ခုကို plan → implement → verify loop နဲ့လုပ်နိုင်ကြောင်းနားလည်မယ်
+[ ] Feature Brief, Acceptance Criteria, Definition of Done တို့ကိုရေးနိုင်မယ်
+[ ] Coding Agent ကို feature-level task ခိုင်းတဲ့ prompt ရေးနိုင်မယ်
+[ ] Agent ရဲ့ plan ကို review / approve / reject လုပ်နိုင်မယ်
+[ ] Agent ရေးတဲ့ code ကို test/build/manual verification နဲ့စစ်နိုင်မယ်
+[ ] Agent ပြီးပြီဆိုတိုင်း Done မဟုတ်ကြောင်းနားလည်မယ်
+[ ] Scope creep, over-engineering, package install risk, silent behavior change တွေကိုသိမယ်
+[ ] Level 4 က Level 5 Multi-Agent Orchestration မဟုတ်သေးကြောင်းနားလည်မယ်
+```
+
+ဒီအခန်းက Part 2 ထဲမှာ အရေးကြီးဆုံးအခန်းတွေထဲကတစ်ခုပါ။ Level 3 CLI Agent မှာ Agent က project folder ထဲမှာ file ဖတ်၊ command run၊ small fix, git diff review လုပ်နိုင်ခဲ့တယ်။ Level 4 Coding Agent မှာတော့ Agent က **feature တစ်ခုကို အစီအစဉ်ဆွဲပြီး အကောင်အထည်ဖော်၊ run/test/build စစ်၊ error တွေပြန်ပြင်၊ summary ပေး** တဲ့ loop ကိုလုပ်နိုင်လာတယ်။
+
+Claude Code common workflows docs မှာ codebase overview, relevant files ရှာခြင်း, bug fix, refactor, tests, pull requests, documentation, plan before editing စတဲ့ everyday development workflows တွေကို prompt recipes အဖြစ်ဖော်ပြထားပြီး plan before editing, subagents, worktrees, scripts စတာတွေကိုပါ workflow options အဖြစ်ဖော်ပြထားပါတယ်။ Codex CLI docs မှာလည်း Codex CLI ကို terminal ထဲမှာ run နိုင်ပြီး selected directory ထဲက code ကို read, change, run လုပ်နိုင်တဲ့ local coding agent အဖြစ်ဖော်ပြထားပါတယ်။ ([Claude][1])
+
+---
+
+## 2. Beginner Explanation
+
+Level 4 Coding Agent ကို အလွယ်ဆုံးပြောရရင်—
+
+```text
+Feature တစ်ခုကို junior developer တစ်ယောက်လို အစအဆုံးလုပ်နိုင်တဲ့ AI assistant
+```
+
+ပါ။
+
+ဥပမာ သင်က ဒီလိုခိုင်းတယ်ဆိုပါစို့။
+
+```text
+Event registration form မှာ attendee history feature ထည့်ပါ။
+
+လိုအပ်ချက်:
+- Name + phone ဖြည့်ပြီး submit လုပ်ရင် attendee list ထဲပေါ်ရမယ်
+- Ticket code generate လုပ်ရမယ်
+- Browser refresh လုပ်ပြီးလည်း data မပျောက်ရဘူး
+- Clear history button ပါရမယ်
+- Manual test cases ပေးရမယ်
+```
+
+Level 3 CLI Agent မှာ ဒီ task ကို file တစ်ခုချင်းစီခွဲပြီး သင်က အများကြီးထိန်းရမယ်။ Level 4 Coding Agent မှာတော့ Agent က—
+
+```text
+1. Project structure ဖတ်မယ်
+2. Feature requirement နားလည်မယ်
+3. Implementation plan ဆွဲမယ်
+4. ဘယ် files ပြင်မလဲပြောမယ်
+5. User approval ရပြီး implement လုပ်မယ်
+6. Run/test/build/manual verification လုပ်မယ်
+7. Error ရှိရင် fix လုပ်မယ်
+8. Final summary ပေးမယ်
+9. Commit message အကြံပြုမယ်
+```
+
+ဒီလို loop တစ်ခုလုံးကို စီမံနိုင်လာတယ်။
+
+ဒါပေမယ့် အရေးကြီးတာက—
+
+```text
+Coding Agent က အလုပ်လုပ်နိုင်တယ်။
+Product owner တာဝန်ကိုတော့ အစားမထိုးနိုင်ဘူး။
+```
+
+Feature scope, acceptance criteria, security boundary, deployment approval, final Done decision တွေကို သင်ပဲယူရမယ်။
+
+---
+
+# 3. Level 4 Coding Agent ဆိုတာဘာလဲ
+
+Level 4: Coding Agent ဆိုတာ—
+
+```text
+Feature-level software task တစ်ခုကို project context, files, commands, tests, Git workflow တွေနဲ့အတူ အဆင့်လိုက်လုပ်နိုင်တဲ့ AI coding assistant
+```
+
+ပါ။
+
+Level 4 မှာ Agent က—
+
+```text
+[✓] feature requirement ကိုဖတ်နိုင်တယ်
+[✓] relevant files ရှာနိုင်တယ်
+[✓] implementation plan ဆွဲနိုင်တယ်
+[✓] multiple files ကို coordinated edit လုပ်နိုင်တယ်
+[✓] npm run build / npm test / manual steps စစ်နိုင်တယ်
+[✓] error output ကိုဖတ်ပြီး fix loop လုပ်နိုင်တယ်
+[✓] changed files summary ပေးနိုင်တယ်
+[✓] risk/assumption/known limitations ပြောနိုင်တယ်
+[✓] commit message အကြံပြုနိုင်တယ်
+```
+
+ဒါပေမယ့် Level 4 မှာ Agent ကို မျက်စိမှိတ်မယုံရပါ။
+
+Level 4 Coding Agent က—
+
+```text
+[✗] requirement ကိုအမြဲမှန်နားလည်မယ်လို့မအာမခံနိုင်
+[✗] tests မရှိရင် behavior မှန်ကြောင်းအပြည့်အဝမသိနိုင်
+[✗] security/privacy implications ကိုလွတ်သွားနိုင်
+[✗] unnecessary package ထည့်ချင်နိုင်
+[✗] scope ကျော်ပြီး feature ပိုထည့်နိုင်
+[✗] production deployment ကို user approval မရှိဘဲမလုပ်သင့်
+```
+
+Level 4 ကို အလွယ်မှတ်ရန်—
+
+```text
+Level 3 = command-aware assistant
+Level 4 = feature-owning assistant
+Level 5 = multi-agent team / orchestration
+```
+
+---
+
+# 4. Level 3 vs Level 4
+
+| အချက်        | Level 3: CLI Agent                    | Level 4: Coding Agent                                   |
+| ------------ | ------------------------------------- | ------------------------------------------------------- |
+| Main job     | project ဖတ်၊ command run၊ small fix   | feature တစ်ခုကို plan → implement → verify              |
+| Scope        | small task / diagnosis / one fix      | feature-level task                                      |
+| File edits   | 1–2 files များ                        | multiple related files ဖြစ်နိုင်                        |
+| Verification | user ကအများကြီးညွှန်ရ                 | agent က test/build/fix loop ပါလုပ်နိုင်                 |
+| Planning     | plan-first လုပ်နိုင်                  | feature implementation plan မဖြစ်မနေလို                 |
+| Output       | diagnosis / diff summary              | working feature + verification + summary                |
+| Risk         | risky command / wrong file            | scope creep / over-engineering / hidden behavior change |
+| User role    | operator + permission gate            | product owner + reviewer + verifier                     |
+| Best use     | build error, small bug, repo overview | cart feature, registration flow, localStorage, tests    |
+
+Level 3 မှာ “ဒီ error ကိုရှာပါ”, “ဒီ file ကိုပြင်ပါ”, “git diff review လုပ်ပါ” လို task တွေကောင်းတယ်။ Level 4 မှာ “ဒီ feature ကို acceptance criteria အတိုင်း အကောင်အထည်ဖော်ပါ” ဆိုတဲ့ task တွေကိုလုပ်နိုင်လာတယ်။
+
+---
+
+# 5. Coding Agent ရဲ့ Agentic Loop
+
+Level 4 ရဲ့ core က **agentic loop** ပါ။
+
+```text
+Explore
+  ↓
+Plan
+  ↓
+Implement
+  ↓
+Verify
+  ↓
+Fix
+  ↓
+Summarize
+  ↓
+Commit-ready
+```
+
+## 5.1 Explore
+
+Agent က relevant files, existing patterns, package scripts, tests, docs တွေကိုရှာတယ်။
+
+```text
+- README.md
+- SPEC.md
+- package.json
+- relevant source files
+- tests
+- existing components/utilities
+```
+
+## 5.2 Plan
+
+Agent က implementation plan တင်တယ်။
+
+```text
+- ဘယ် files ပြင်မလဲ
+- ဘာ functions/components ထည့်မလဲ
+- ဘာ state/storage သုံးမလဲ
+- ဘာ tests/manual checks လုပ်မလဲ
+- ဘာ risk ရှိလဲ
+```
+
+## 5.3 Implement
+
+User approval ရပြီးမှ code ပြင်တယ်။
+
+```text
+- minimal changes
+- scope-controlled edits
+- no unnecessary packages
+- no secret access
+```
+
+## 5.4 Verify
+
+Agent က available commands / manual steps နဲ့ စစ်တယ်။
+
+```text
+npm run build
+npm test
+npm run lint
+manual browser test steps
+```
+
+## 5.5 Fix
+
+Build/test fail ဖြစ်ရင် error ကိုဖတ်ပြီး fix loop လုပ်တယ်။
+
+```text
+run → fail → diagnose → fix → rerun
+```
+
+## 5.6 Summarize
+
+Agent က final summary ပေးတယ်။
+
+```text
+- changed files
+- what changed
+- verification result
+- known risks
+- commit message suggestion
+```
+
+Claude Code best-practices docs မှာ guidance တွေက fixed rules မဟုတ်ဘဲ context အလိုက်ပြောင်းနိုင်တဲ့ starting points ဖြစ်ကြောင်း၊ task ကြီးလား၊ prompt vague ဖြစ်လား၊ context noisy ဖြစ်လား စတာတွေကိုကြည့်ပြီး plan, explore, specificity ကိုချိန်ညှိသင့်ကြောင်းဖော်ပြထားပါတယ်။ ဒီ course မှာ beginner safety အတွက် Level 4 feature task တွေကို Explore → Plan → Implement → Verify loop နဲ့သွားမယ်။ ([Claude][2])
+
+---
+
+# 6. Feature Brief ဆိုတာဘာလဲ
+
+Level 4 Agent ကို feature ခိုင်းမယ်ဆိုရင် prompt တစ်ကြောင်းနဲ့မလုံလောက်ပါဘူး။ **Feature Brief** လိုတယ်။
+
+Feature Brief ဆိုတာ—
+
+```text
+Agent ကို feature တစ်ခုအတွက် ပေးတဲ့ mini SPEC
+```
+
+ပါ။
+
+Feature Brief ထဲမှာ အနည်းဆုံးပါရမယ့်အပိုင်း—
+
+```text
+1. Feature name
+2. Context
+3. Goal
+4. Scope
+5. Non-goals
+6. Acceptance criteria
+7. Allowed files/folders
+8. Do-not-touch list
+9. Verification
+10. Reporting format
+```
+
+ဥပမာ—
+
+```md
+# FEATURE_BRIEF.md
+
+## Feature
+Registration History
+
+## Context
+This is a static HTML/CSS/JS practice app for learning Level 4 Coding Agent workflow.
+
+## Goal
+When a user submits name and phone, the app should add an attendee record to a visible list and persist it in localStorage.
+
+## Scope
+- Frontend only
+- No backend API
+- No package install
+- Use existing index.html, style.css, app.js
+
+## Non-goals
+- Email/SMS notification
+- Database
+- Authentication
+- Deployment
+
+## Acceptance Criteria
+- Empty name shows Myanmar error
+- Empty phone shows Myanmar error
+- Valid submission generates ticket code
+- Attendee appears in list
+- Data remains after browser refresh
+- Clear history button removes saved attendees
+- Browser console has no errors
+
+## Verification
+- Manual browser tests
+- git diff summary
+```
+
+Feature Brief ကောင်းရင် Coding Agent လမ်းမလွဲနိုင်ဘူး။
+
+---
+
+# 7. Acceptance Criteria ဆိုတာဘာလဲ
+
+Acceptance Criteria ဆိုတာ feature အောင်မြင်ပြီလား စစ်လို့ရတဲ့အချက်တွေပါ။
+
+မကောင်းတဲ့ criteria—
+
+```text
+Registration feature ကောင်းရမယ်။
+```
+
+ကောင်းတဲ့ criteria—
+
+```text
+[ ] Name empty ဖြစ်ရင် “နာမည်ဖြည့်ပါ။” ပြရမယ်
+[ ] Phone empty ဖြစ်ရင် “ဖုန်းနံပါတ်ဖြည့်ပါ။” ပြရမယ်
+[ ] Valid submit လုပ်ရင် ticket code generate ဖြစ်ရမယ်
+[ ] Attendee list ထဲ name, phone, ticket code ပေါ်ရမယ်
+[ ] Browser refresh လုပ်ပြီးလည်း list မပျောက်ရဘူး
+[ ] Clear history button နှိပ်ရင် list ရှင်းရမယ်
+```
+
+Acceptance Criteria မရှိရင် Agent က “ပြီးပြီ” လို့ပြောပေမယ့် သင်စစ်လို့မရဘူး။
+
+---
+
+# 8. Definition of Done
+
+Level 4 Coding Agent အတွက် Done ကိုသတ်မှတ်ထားရမယ်။
+
+Feature တစ်ခု Done ဖြစ်ဖို့—
+
+```text
+[ ] Acceptance criteria အားလုံးစစ်ပြီး
+[ ] Build/test/manual verification ရှိပြီး
+[ ] Browser console error မရှိကြောင်းစစ်ပြီး
+[ ] Changed files summary ရှိပြီး
+[ ] Scope ကျော်တဲ့ changes မရှိကြောင်းစစ်ပြီး
+[ ] Known risks / assumptions ရေးပြီး
+[ ] Git diff review လုပ်ပြီး
+[ ] Commit message suggestion ရှိပြီး
+```
+
+Agent က “done” လို့ပြောတာက စကားလုံးပါ။ Definition of Done က စစ်ဆေးရေးစနစ်ပါ။
+
+```text
+Agent says done ≠ Feature is done
+Definition of Done pass = Feature is done
+```
+
+---
+
+# 9. Level 4 ကို ဘယ်အချိန်သုံးသင့်လဲ
+
+## 9.1 Feature တစ်ခုလုံးကို အကောင်အထည်ဖော်ချင်တဲ့အခါ
+
+ဥပမာ—
+
+```text
+- Cart feature
+- Registration history
+- Event list with filtering
+- Checkout form
+- localStorage persistence
+- Admin attendee table
+```
+
+## 9.2 Existing app ထဲ behavior တစ်ခုထည့်ချင်တဲ့အခါ
+
+```text
+Current app မှာ form ရှိပြီးသား။
+Submit လုပ်ရင် attendee list ထဲထည့်ချင်တယ်။
+```
+
+## 9.3 Tests / verification ပါအောင်လုပ်ချင်တဲ့အခါ
+
+```text
+Feature implement + tests/manual checks + build verification
+```
+
+## 9.4 Multiple related files ပြင်ရမယ့်အခါ
+
+ဥပမာ—
+
+```text
+index.html
+style.css
+app.js
+```
+
+သုံးဖိုင်လုံးလိုအပ်ပေမယ့် scope က frontend-only ဖြစ်တယ်။
+
+## 9.5 Refactor + behavior preserve လုပ်ချင်တဲ့အခါ
+
+```text
+Existing behavior မပြောင်းဘဲ code organize လုပ်ချင်တယ်။
+```
+
+---
+
+# 10. Level 4 ကို ဘယ်အချိန်သတိထားသင့်လဲ
+
+## 10.1 Feature scope မရှင်းတဲ့အခါ
+
+မကောင်းတဲ့ prompt—
+
+```text
+Event system ကောင်းအောင်လုပ်ပါ။
+```
+
+Agent ကဘာလုပ်ရမှန်းမသိဘူး။
+
+ပြင်ရန်—
+
+```text
+Feature Brief ရေးပါ။
+```
+
+## 10.2 Product decision မဖြတ်ရသေးတဲ့အခါ
+
+ဥပမာ—
+
+```text
+Notification email ပို့မလား?
+PWA လား native mobile လား?
+Payment ပါမလား?
+```
+
+ဆုံးဖြတ်ချက်မရှိဘဲ Agent ကို feature ခိုင်းရင် scope ပွသွားမယ်။
+
+## 10.3 Security-sensitive feature
+
+```text
+authentication
+authorization
+payment
+token storage
+admin permissions
+database migration
+deployment
+```
+
+ဒီလို feature တွေမှာ Level 4 ကိုသုံးနိုင်ပေမယ့် Verifier/Auditor workflow မဖြစ်မနေလိုတယ်။
+
+## 10.4 Package install လိုတဲ့ feature
+
+Package install မလုပ်ခင် review လိုတယ်။
+
+```text
+ဒီ package တကယ်လိုလား?
+ဘယ် dependency type ထဲထည့်မလဲ?
+security risk ရှိလား?
+built-in နည်းလမ်းနဲ့ရလား?
+```
+
+## 10.5 Production action
+
+Level 4 Coding Agent ကို production deploy ခိုင်းတာ မလုပ်သင့်သေးဘူး။ Deployment chapter/Deployer subagent အဆင့်မှာ approval gate နဲ့လုပ်မယ်။
+
+---
+
+# 11. Level 4 Prompt Anatomy
+
+Level 4 Coding Agent prompt က Level 3 prompt ထက်ပိုပြည့်စုံရမယ်။
+
+```text
+1. Role
+2. Mode
+3. Feature brief
+4. Scope
+5. Non-goals
+6. Allowed files/folders
+7. Do-not-touch list
+8. Workflow steps
+9. Acceptance criteria
+10. Verification
+11. Reporting format
+12. Approval gates
+```
+
+Example—
+
+```text
+Role:
+သင်က careful coding agent ဖြစ်တယ်။
+
+Mode:
+Plan first. Code မပြင်သေးပါနဲ့။
+
+Feature:
+Registration History feature ထည့်ချင်ပါတယ်။
+
+Context:
+ဒီ app က static HTML/CSS/JS practice app ဖြစ်တယ်။
+
+Goal:
+Valid registration submit လုပ်ရင် attendee list ထဲထည့်ပြီး localStorage ထဲသိမ်းပါ။
+
+Scope:
+- Frontend only
+- Existing files ပဲသုံးပါ
+- Backend API မထည့်ပါ
+- Package install မလုပ်ပါ
+
+Allowed files:
+- playground/chapter-11-coding-agent/index.html
+- playground/chapter-11-coding-agent/style.css
+- playground/chapter-11-coding-agent/app.js
+
+Do not touch:
+- package.json
+- package-lock.json
+- .env
+- node_modules/**
+- projects/event-management/**
+- services/api/**
+
+Acceptance Criteria:
+- Empty name shows Myanmar error
+- Empty phone shows Myanmar error
+- Valid submit generates ticket code
+- Attendee appears in list
+- Data persists after browser refresh
+- Clear history button clears list and localStorage
+- Browser console has no errors
+
+Workflow:
+1. Read relevant files
+2. Present implementation plan
+3. Wait for approval
+4. Implement
+5. Provide manual test steps
+6. Provide git diff summary
+7. Suggest commit message
+
+Approval:
+Do not edit before approval.
+```
+
+---
+
+# 12. Approval Gates
+
+Level 4 Coding Agent မှာ approval gates မပါရင် Agent ကတစ်ခါတည်းပြေးသွားနိုင်တယ်။
+
+သုံးသင့်တဲ့ approval gates—
+
+```text
+Gate 1 — Before editing files
+Gate 2 — Before installing packages
+Gate 3 — Before running risky commands
+Gate 4 — Before changing package.json
+Gate 5 — Before database migration
+Gate 6 — Before Git commit
+Gate 7 — Before deployment
+```
+
+Beginner အတွက် အရေးကြီးဆုံး ၃ ခု—
+
+```text
+Code မပြင်ခင် plan approve
+Package install မလုပ်ခင် approve
+Commit မလုပ်ခင် diff approve
+```
+
+Prompt—
+
+```text
+Approval မရသေးဘဲ file မပြင်ပါနဲ့။
+Approval မရသေးဘဲ package install မလုပ်ပါနဲ့။
+Approval မရသေးဘဲ commit မလုပ်ပါနဲ့။
+```
+
+---
+
+# 13. Coding Agent Output Format
+
+Agent ကို final output format သတ်မှတ်ပေးပါ။
+
+```text
+Final response format:
+
+## Summary
+ဘာလုပ်ခဲ့လဲ
+
+## Changed Files
+- file path: change summary
+
+## Acceptance Criteria Check
+| Criteria | Status | Evidence |
+
+## Verification
+- command/manual test
+- result
+
+## Known Risks
+- risk / limitation
+
+## Suggested Commit Message
+message
+```
+
+ဒီ format သတ်မှတ်ထားရင် Agent response ကိုစစ်ရလွယ်တယ်။
+
+---
+
+# 14. Level 4 Example — Registration History Feature
+
+အခု Level 4 feature task တစ်ခုကိုစဉ်းစားကြည့်မယ်။
+
+## Feature
+
+```text
+Registration History
+```
+
+## Goal
+
+```text
+User က name/phone ဖြည့်ပြီး submit လုပ်ရင် attendee list ထဲထည့်မယ်။
+Ticket code generate လုပ်မယ်။
+localStorage ထဲသိမ်းမယ်။
+Refresh လုပ်ပြီး data မပျောက်ရဘူး။
+Clear history button နဲ့ list ရှင်းနိုင်ရမယ်။
+```
+
+## Non-goals
+
+```text
+Backend API မပါ
+Database မပါ
+Auth မပါ
+Email/SMS notification မပါ
+Package install မပါ
+```
+
+ဒီ feature က Level 4 အတွက်ကောင်းတယ်။ ဘာကြောင့်လဲဆိုရင်—
+
+```text
+HTML structure ပြင်ရမယ်
+CSS style ထည့်ရမယ်
+JavaScript state/localStorage logic ထည့်ရမယ်
+Manual test cases လုပ်ရမယ်
+```
+
+ဒါပေမယ့် backend/database/deployment မပါသေးလို့ scope ထိန်းနိုင်တယ်။
+
+---
+
+# 15. Step-by-step Lab
+
+ဒီ lab မှာ Level 4 Coding Agent ကို feature တစ်ခုအတွက် အသုံးပြုမယ်။ Tool မရှိသေးရင် prompt, starter code, expected behavior ကိုရေးပြီး simulation လုပ်နိုင်တယ်။ Tool ရှိသူက CLI Agent / Coding Agent နဲ့တကယ်လုပ်နိုင်တယ်။
+
+## Lab Goal
+
+```text
+Coding Agent ကို feature-level task ခိုင်းပြီး
+plan → implement → verify → diff summary workflow လေ့ကျင့်မယ်။
+```
+
+## Folder Structure
+
+```text
+agentic-zero-to-hero/
+└── playground/
+    └── chapter-11-coding-agent/
+        ├── index.html
+        ├── style.css
+        └── app.js
+```
+
+---
+
+## Step 1 — Folder ဆောက်ပါ
+
+macOS/Linux/Git Bash—
+
+```bash
+cd ~/Desktop/agentic-zero-to-hero
+mkdir -p playground/chapter-11-coding-agent
+cd playground/chapter-11-coding-agent
+touch index.html style.css app.js
+```
+
+Windows PowerShell—
+
+```powershell
+cd ~/Desktop/agentic-zero-to-hero
+mkdir playground/chapter-11-coding-agent
+cd playground/chapter-11-coding-agent
+New-Item index.html
+New-Item style.css
+New-Item app.js
+```
+
+---
+
+## Step 2 — Starter Files ထည့်ပါ
+
+### index.html
+
+```html
+<!DOCTYPE html>
+<html lang="my">
+  <head>
+    <meta charset="UTF-8">
+    <title>Coding Agent Practice</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+
+  <body>
+    <main class="page">
+      <section class="card">
+        <p class="eyebrow">Level 4 Lab</p>
+        <h1>Registration History Practice</h1>
+        <p>
+          Coding Agent ကို feature-level task ခိုင်းပြီး registration history feature ထည့်မည်။
+        </p>
+
+        <form id="registration-form">
+          <label for="name">နာမည်</label>
+          <input id="name" name="name" type="text">
+
+          <label for="phone">ဖုန်းနံပါတ်</label>
+          <input id="phone" name="phone" type="tel">
+
+          <button type="submit">Register လုပ်မည်</button>
+        </form>
+
+        <p id="message" class="message"></p>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
+```
+
+### style.css
+
+```css
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.card {
+  width: 100%;
+  max-width: 560px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.eyebrow {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+label {
+  display: block;
+  margin-top: 16px;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+input,
+button {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 16px;
+}
+
+input {
+  border: 1px solid #d1d5db;
+}
+
+button {
+  margin-top: 20px;
+  border: none;
+  background: #2563eb;
+  color: white;
+  font-weight: 700;
+}
+
+.message {
+  margin-top: 16px;
+  font-weight: 700;
+}
+
+.message.error {
+  color: #b91c1c;
+}
+
+.message.success {
+  color: #15803d;
+}
+```
+
+### app.js
+
+```js
+function validateRegistrationForm(formData) {
+  const name = formData.name.trim();
+  const phone = formData.phone.trim();
+
+  if (name === "") {
+    return "နာမည်ဖြည့်ပါ။";
+  }
+
+  if (phone === "") {
+    return "ဖုန်းနံပါတ်ဖြည့်ပါ။";
+  }
+
+  return null;
+}
+
+const form = document.querySelector("#registration-form");
+const nameInput = document.querySelector("#name");
+const phoneInput = document.querySelector("#phone");
+const message = document.querySelector("#message");
+
+form.addEventListener("submit", function (event) {
+  event.preventDefault();
+
+  const formData = {
+    name: nameInput.value,
+    phone: phoneInput.value
+  };
+
+  const errorMessage = validateRegistrationForm(formData);
+
+  message.className = "message";
+
+  if (errorMessage) {
+    message.textContent = errorMessage;
+    message.classList.add("error");
+    return;
+  }
+
+  message.textContent = "Registration အောင်မြင်ပါသည်။";
+  message.classList.add("success");
+  form.reset();
+});
+```
+
+---
+
+## Step 3 — Project root ပြန်သွားပါ
+
+```bash
+cd ~/Desktop/agentic-zero-to-hero
+git status
+```
+
+Working tree clean မဟုတ်ရင် current changes ကို commit လုပ်ပါ။
+
+---
+
+## Step 4 — Coding Agent Prompt ပေးပါ
+
+```text
+Role:
+သင်က careful Level 4 Coding Agent ဖြစ်တယ်။
+
+Mode:
+Plan first. Code မပြင်သေးပါနဲ့။
+
+Feature:
+Registration History feature ထည့်ချင်ပါတယ်။
+
+Context:
+ဒီ app က static HTML/CSS/JavaScript practice app ဖြစ်ပါတယ်။
+Backend API မရှိပါ။
+Package install မလိုပါ။
+
+Goal:
+User က name + phone ဖြည့်ပြီး submit လုပ်ရင် attendee list ထဲထည့်ပါ။
+Ticket code generate လုပ်ပါ။
+Data ကို localStorage ထဲသိမ်းပါ။
+Browser refresh လုပ်ပြီးလည်း attendee list မပျောက်ရပါ။
+Clear history button ထည့်ပါ။
+
+Allowed files:
+- playground/chapter-11-coding-agent/index.html
+- playground/chapter-11-coding-agent/style.css
+- playground/chapter-11-coding-agent/app.js
+
+Do not touch:
+- package.json
+- package-lock.json
+- .env
+- node_modules/**
+- projects/**
+- services/**
+- deployment files
+
+Non-goals:
+- Backend API မထည့်ပါ
+- Database မထည့်ပါ
+- Email/SMS/Viber notification မထည့်ပါ
+- Package install မလုပ်ပါ
+
+Acceptance Criteria:
+- Empty name shows “နာမည်ဖြည့်ပါ။”
+- Empty phone shows “ဖုန်းနံပါတ်ဖြည့်ပါ။”
+- Valid submit generates a ticket code
+- Attendee appears in visible history list
+- History remains after browser refresh
+- Clear history button clears list and localStorage
+- Browser console has no errors
+- Existing validation behavior still works
+
+Workflow:
+1. Read allowed files
+2. Present implementation plan
+3. Wait for approval
+4. Implement only after approval
+5. Provide manual test cases
+6. Provide git diff summary
+7. Suggest commit message
+
+Do not edit before approval.
+```
+
+---
+
+## Step 5 — Agent Plan ကို Review လုပ်ပါ
+
+Agent plan ထဲမှာ အောက်ပါအရာတွေပါလားစစ်ပါ။
+
+```text
+[ ] index.html ထဲ attendee list section ထည့်မယ်
+[ ] Clear history button ထည့်မယ်
+[ ] style.css ထဲ history list style ထည့်မယ်
+[ ] app.js ထဲ localStorage read/write logic ထည့်မယ်
+[ ] ticket code generator ထည့်မယ်
+[ ] form submit flow ကို update လုပ်မယ်
+[ ] browser refresh test ပါမယ်
+[ ] package install မပါဘူး
+[ ] backend/database မပါဘူး
+```
+
+Plan မကိုက်ရင် ပြန်ပြင်ခိုင်းပါ။
+
+Prompt—
+
+```text
+Plan ထဲမှာ backend API ထည့်ဖို့ပြောထားပါတယ်။
+ဒါက Non-goal ဖြစ်ပါတယ်။
+Plan ကို frontend-only localStorage feature အဖြစ်ပြန်ပြင်ပါ။
+Code မပြင်သေးပါနဲ့။
+```
+
+---
+
+## Step 6 — Approval ပေးပါ
+
+Plan ကောင်းရင်—
+
+```text
+Plan ကို approve လုပ်ပါတယ်။
+Allowed files ၃ ဖိုင်ထဲမှာပဲ implement လုပ်ပါ။
+Package install မလုပ်ပါနဲ့။
+ပြီးရင် manual test cases နဲ့ git diff summary ပေးပါ။
+```
+
+---
+
+## Step 7 — Manual Verification လုပ်ပါ
+
+Browser မှာ `index.html` ဖွင့်ပြီးစမ်းပါ။
+
+Test cases—
+
+```text
+1. Name empty, phone empty
+Expected: နာမည်ဖြည့်ပါ။
+
+2. Name filled, phone empty
+Expected: ဖုန်းနံပါတ်ဖြည့်ပါ။
+
+3. Name + phone valid submit
+Expected:
+- success message
+- ticket code
+- attendee appears in list
+
+4. Browser refresh
+Expected:
+- attendee list remains
+
+5. Clear history button
+Expected:
+- list clears
+- refresh after clear still empty
+
+6. Browser console
+Expected:
+- no errors
+```
+
+---
+
+## Step 8 — Git Review
+
+```bash
+git status
+git diff playground/chapter-11-coding-agent/
+```
+
+စစ်ရန်—
+
+```text
+[ ] Allowed files ၃ ဖိုင်ပဲပြင်ထားလား
+[ ] package.json မပြင်ထားဘူးလား
+[ ] .env မပါဘူးလား
+[ ] node_modules မပါဘူးလား
+[ ] Feature scope ကိုက်လား
+```
+
+အဆင်ပြေရင်—
+
+```bash
+git add playground/chapter-11-coding-agent/
+git commit -m "add level 4 coding agent registration history lab"
+```
+
+---
+
+# 16. Expected Implementation Shape
+
+Agent ကရေးမယ့် implementation ပုံစံက tool/model အလိုက်ကွာနိုင်ပါတယ်။ ဒါပေမယ့် အောက်ပါ concepts ပါသင့်တယ်။
+
+## HTML additions
+
+```html
+<section class="history-section">
+  <div class="history-header">
+    <h2>Registration History</h2>
+    <button id="clear-history-button" type="button">History ရှင်းမည်</button>
+  </div>
+
+  <ul id="attendee-list" class="attendee-list"></ul>
+</section>
+```
+
+## JavaScript concepts
+
+```js
+const STORAGE_KEY = "chapter-11-attendees";
+
+function loadAttendees() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  return saved ? JSON.parse(saved) : [];
+}
+
+function saveAttendees(attendees) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(attendees));
+}
+
+function generateTicketCode() {
+  return `EVT-${Date.now()}`;
+}
+```
+
+## Render concept
+
+```js
+function renderAttendees() {
+  attendeeList.innerHTML = "";
+
+  attendees.forEach(function (attendee) {
+    const item = document.createElement("li");
+    item.textContent = `${attendee.name} — ${attendee.phone} — ${attendee.ticketCode}`;
+    attendeeList.appendChild(item);
+  });
+}
+```
+
+ဒီ code exact ဖြစ်စရာမလိုပါဘူး။ အရေးကြီးတာက concept ကိုက်ဖို့ပါ။
+
+---
+
+# 17. Lab Reflection
+
+Lab note ထဲမှာ ဒီလိုရေးပါ။
+
+```md
+# Chapter 11 Lab — Coding Agent
+
+## Feature
+Registration History
+
+## Agent Workflow
+- Explored allowed files
+- Presented plan
+- Waited for approval
+- Implemented feature
+- Provided manual tests
+- Provided git diff summary
+
+## Acceptance Criteria Result
+| Criteria | Status |
+|---|---|
+| Empty name error | PASS |
+| Empty phone error | PASS |
+| Ticket code generated | PASS |
+| Attendee appears in list | PASS |
+| Persists after refresh | PASS |
+| Clear history works | PASS |
+| Console error free | PASS |
+
+## Changed Files
+- index.html
+- style.css
+- app.js
+
+## Lesson
+Level 4 Coding Agent သည် small feature တစ်ခုကို plan → implement → verify loop နဲ့လုပ်နိုင်သည်။ သို့သော် scope, non-goals, allowed files, acceptance criteria မပေးရင် scope creep ဖြစ်နိုင်သည်။
+```
+
+---
+
+# 18. Level 4 ရဲ့ အားသာချက်များ
+
+## 18.1 Feature-level productivity မြန်တယ်
+
+Small feature တစ်ခုကို file အများအပြားနဲ့တစ်ပြိုင်နက်အကောင်အထည်ဖော်နိုင်တယ်။
+
+## 18.2 Existing code patterns လိုက်နိုင်တယ်
+
+Agent က project ထဲက existing naming, styles, components, validation logic, scripts တွေကိုဖတ်ပြီးလိုက်နိုင်တယ်။
+
+## 18.3 Verification loop ပါနိုင်တယ်
+
+Level 4 မှာ Agent ကို test/build/manual checks run/fix လုပ်ခိုင်းနိုင်တယ်။
+
+## 18.4 Documentation summary ရနိုင်တယ်
+
+Feature ပြီးရင် changed files summary, risk, test result, commit message suggestion ရနိုင်တယ်။
+
+## 18.5 Learning အတွက်ကောင်းတယ်
+
+Agent ရေးထားတဲ့ plan/diff/summary ကိုဖတ်ရင်း developer workflow ကိုလေ့လာနိုင်တယ်။
+
+---
+
+# 19. Level 4 ရဲ့ အန္တရာယ်များ
+
+## 19.1 Scope creep
+
+Feature တစ်ခုခိုင်းတာကို Agent က ပိုလုပ်ချင်နိုင်တယ်။
+
+ဥပမာ—
+
+```text
+localStorage feature ခိုင်းတာ
+Agent က backend API ထည့်ချင်လာ
+```
+
+## 19.2 Over-engineering
+
+Simple app အတွက် framework/library/helper abstraction အများကြီးထည့်ချင်နိုင်တယ်။
+
+## 19.3 Silent behavior change
+
+Existing validation behavior, UI flow, storage key, field names မလိုဘဲပြောင်းသွားနိုင်တယ်။
+
+## 19.4 Unnecessary package install
+
+```text
+simple date format အတွက် package install
+simple ID generation အတွက် UUID package install
+```
+
+လိုအပ်မရှိဘဲ dependency တိုးနိုင်တယ်။
+
+## 19.5 Weak verification
+
+Agent က “manual test cases” ပေးပေမယ့် တကယ် browser မှာမစမ်းထားနိုင်တာရှိတယ်။ User က manual verification လုပ်ရမယ်။
+
+## 19.6 Passing build ≠ correct feature
+
+Build pass ဖြစ်တာက syntax/type error မရှိတာကိုပြနိုင်တယ်။ Product behavior မှန်တယ်လို့မဆိုလိုပါ။
+
+---
+
+# 20. Beginner Safety Rules for Coding Agent
+
+```text
+Rule 1 — Feature Brief မပါဘဲ feature-level task မခိုင်းပါနဲ့။
+Rule 2 — Acceptance Criteria ကိုစစ်လို့ရအောင်ရေးပါ။
+Rule 3 — Non-goals ကိုရှင်းရှင်းရေးပါ။
+Rule 4 — Allowed files/folders သတ်မှတ်ပါ။
+Rule 5 — Do-not-touch list ထည့်ပါ။
+Rule 6 — Plan approval မရခင် edit မလုပ်ခိုင်းပါနဲ့။
+Rule 7 — Package install မလုပ်ခင် approval gate ထည့်ပါ။
+Rule 8 — Verification command/manual test cases မဖြစ်မနေတောင်းပါ။
+Rule 9 — Agent final summary ကို Git diff နဲ့စစ်ပါ။
+Rule 10 — Commit မလုပ်ခင် human review လုပ်ပါ။
+```
+
+---
+
+# 21. Copy-paste Prompts
+
+## 21.1 Level 4 Feature Brief Prompt
+
+```text
+သင်က careful Level 4 Coding Agent ဖြစ်တယ်။
+
+Mode:
+Plan first. Code မပြင်သေးပါနဲ့။
+
+Feature:
+[feature name]
+
+Context:
+[project context]
+
+Goal:
+[feature goal]
+
+Scope:
+[what to do]
+
+Non-goals:
+[what not to do]
+
+Allowed files/folders:
+- [path]
+
+Do not touch:
+- .env
+- node_modules/**
+- dist/**
+- package.json, unless explicitly approved
+- deployment files
+- [other paths]
+
+Acceptance Criteria:
+- [criteria 1]
+- [criteria 2]
+- [criteria 3]
+
+Workflow:
+1. Explore relevant files
+2. Present implementation plan
+3. Wait for approval
+4. Implement after approval
+5. Run available verification
+6. Provide manual test steps
+7. Provide git diff summary
+8. Suggest commit message
+
+Do not edit before approval.
+```
+
+## 21.2 Plan Review Prompt
+
+```text
+အောက်ပါ implementation plan ကို review လုပ်ပါ။
+
+စစ်ရန်:
+- Scope နဲ့ကိုက်လား
+- Non-goals ကိုချိုးဖောက်ထားလား
+- Allowed files ထက်ကျော်လား
+- Package install လိုအပ်မရှိပါလား
+- Verification step လုံလောက်လား
+- Risk ရှိလား
+- Approve / revise / reject recommendation ပေးပါ
+
+Plan:
+[paste plan]
+```
+
+## 21.3 Feature Implementation Approval Prompt
+
+```text
+Plan ကို approve လုပ်ပါတယ်။
+
+စည်းကမ်း:
+- Allowed files/folders ထဲမှာပဲပြင်ပါ
+- Package install မလုပ်ပါနဲ့
+- Non-goals မထည့်ပါနဲ့
+- Existing behavior မလိုအပ်ဘဲမပြောင်းပါနဲ့
+- ပြီးရင် acceptance criteria check table ပေးပါ
+- git diff summary ပေးပါ
+```
+
+## 21.4 Coding Agent Verification Prompt
+
+```text
+Feature implementation ပြီးပြီလို့ယူဆထားပါတယ်။
+Code မပြင်သေးပါနဲ့။
+Verification review လုပ်ပါ။
+
+စစ်ရန်:
+- Acceptance criteria တစ်ခုချင်းစီ PASS/FAIL
+- Manual test steps
+- Browser console error risk
+- Build/test command ရှိရင် run result
+- Changed files summary
+- Scope creep ရှိ/မရှိ
+- Known risks
+
+Table နဲ့ပြန်ပေးပါ။
+```
+
+## 21.5 Scope Creep Correction Prompt
+
+```text
+သင့် plan/changes က scope ကျော်နေပါတယ်။
+
+Scope:
+[allowed scope]
+
+Non-goals:
+[non-goals]
+
+Scope ကျော်တဲ့အချက်:
+[explain]
+
+Code မပြင်သေးပါနဲ့။
+Plan ကို scope အတွင်းပြန်လျှော့ပါ။
+```
+
+## 21.6 Commit-ready Summary Prompt
+
+```text
+Feature ပြီးပါပြီ။
+Commit မလုပ်ခင် final summary ပေးပါ။
+
+ပြန်ပေးရန်:
+- changed files
+- feature summary
+- acceptance criteria status
+- verification result
+- risks/assumptions
+- rollback note
+- commit message ၃ ခု
+```
+
+---
+
+# 22. Expected Output
+
+ဒီအခန်းပြီးရင် learner က အောက်ပါ summary ကိုရေးနိုင်ရမယ်။
+
+```md
+# Level 4 — Coding Agent Summary
+
+## Definition
+Coding Agent ဆိုတာ feature-level task တစ်ခုကို explore → plan → implement → verify → fix → summarize loop နဲ့လုပ်နိုင်တဲ့ AI coding assistant ဖြစ်တယ်။
+
+## Difference from Level 3
+Level 3 CLI Agent က command-aware assistant ဖြစ်ပြီး small fix/diagnosis အတွက်ကောင်းတယ်။
+Level 4 Coding Agent က feature-level implementation ကိုတာဝန်ယူလုပ်နိုင်တယ်။
+
+## Good For
+- Small to medium feature
+- Multi-file frontend feature
+- localStorage persistence
+- form flow
+- tests/manual verification
+- refactor with behavior preservation
+
+## Risks
+- Scope creep
+- Over-engineering
+- unnecessary dependency
+- silent behavior change
+- weak verification
+- security/privacy miss
+
+## Required Inputs
+- Feature Brief
+- Scope
+- Non-goals
+- Acceptance Criteria
+- Allowed files
+- Do-not-touch list
+- Verification requirements
+
+## Rule
+Plan မ approve ခင် code မပြင်ရ။
+Feature Done ဖြစ်ဖို့ acceptance criteria + verification + git diff review လိုတယ်။
+```
+
+---
+
+# 23. Common Errors
+
+## Error 1 — Feature Brief မရေးဘဲ feature ခိုင်းခြင်း
+
+မကောင်း—
+
+```text
+Registration history လုပ်ပါ။
+```
+
+ပြဿနာ—
+
+```text
+localStorage လား database လား မသိ
+ticket code format မသိ
+clear button ပါ/မပါ မသိ
+verification မရှိ
+```
+
+ပြင်နည်း—
+
+```text
+Feature Brief + Acceptance Criteria ထည့်ပါ။
+```
+
+---
+
+## Error 2 — Non-goals မထည့်ခြင်း
+
+Non-goals မထည့်ရင် Agent က extra feature ထည့်နိုင်တယ်။
+
+ဥပမာ—
+
+```text
+Email notification
+Backend API
+QR code
+Package install
+```
+
+ပြင်နည်း—
+
+```text
+Non-goals section ထည့်ပါ။
+```
+
+---
+
+## Error 3 — Plan ကိုမဖတ်ဘဲ approve လုပ်ခြင်း
+
+Agent plan ထဲမှာ scope ကျော်တာပါနိုင်တယ်။ Approval မပေးခင် စစ်ပါ။
+
+```text
+Allowed files ကိုက်လား?
+Package install ပါလား?
+Verification ပါလား?
+```
+
+---
+
+## Error 4 — Build/test မပါဘဲ Done လက်ခံခြင်း
+
+Manual project ဆိုရင် manual test cases လုပ်ပါ။ npm project ဆိုရင် build/test run ပါ။
+
+```text
+Done = verified
+```
+
+---
+
+## Error 5 — package install ကိုခွင့်ပြုလွယ်ခြင်း
+
+Level 4 Agent က package install လုပ်ချင်လာနိုင်တယ်။
+
+Rule—
+
+```text
+No new package unless approved.
+```
+
+---
+
+## Error 6 — Git diff မဖတ်ခြင်း
+
+Agent summary ကောင်းတယ်ဆိုပြီး commit မလုပ်ပါနဲ့။ Git diff ကိုဖတ်ပါ။
+
+```bash
+git status
+git diff
+```
+
+---
+
+## Error 7 — Feature ကြီးလွန်းခြင်း
+
+မကောင်း—
+
+```text
+Full Event Management Platform MVP အကုန်လုပ်ပါ။
+```
+
+ပြင်နည်း—
+
+```text
+Feature တစ်ခုချင်းစီခွဲပါ။
+Event list → event detail → registration → ticket confirmation
+```
+
+---
+
+# 24. Debug / Recovery
+
+## 24.1 Agent က scope ကျော်ပြီး file အများကြီးပြင်သွားရင်
+
+Prompt—
+
+```text
+Code မပြင်သေးပါနဲ့။
+Scope creep ဖြစ်နိုင်ပါတယ်။
+
+လုပ်ရန်:
+1. git status စစ်ပါ
+2. changed files list ပေးပါ
+3. allowed files ထဲမပါတဲ့ changes တွေဖော်ပြပါ
+4. non-goals ချိုးဖောက်ထားလားစစ်ပါ
+5. rollback plan ပေးပါ
+6. git restore command မ run ခင် approval တောင်းပါ
+```
+
+## 24.2 Feature behavior မမှန်ရင်
+
+Prompt—
+
+```text
+Feature implementation မျှော်မှန်းသလိုမအလုပ်လုပ်ပါ။
+
+Expected:
+[expected]
+
+Actual:
+[actual]
+
+Acceptance Criteria:
+[paste criteria]
+
+Code မပြင်ခင်:
+- failing criteria ကို identify လုပ်ပါ
+- possible root causes ပေးပါ
+- minimal fix plan ပေးပါ
+- approval တောင်းပါ
+```
+
+## 24.3 Build/test fail ဖြစ်ရင်
+
+Prompt—
+
+```text
+Build/test fail ဖြစ်ပါတယ်။
+Code မပြင်သေးပါနဲ့။
+
+Output:
+[paste output]
+
+လုပ်ရန်:
+- first meaningful error ရှာပါ
+- affected file ကိုပြပါ
+- root cause candidates ပေးပါ
+- minimal fix plan ပေးပါ
+- rerun command ဘာဖြစ်မလဲပြောပါ
+```
+
+## 24.4 Agent က package install လုပ်ပြီး project ပျက်သွားရင်
+
+Prompt—
+
+```text
+Package install ပြီး project ပျက်သွားပါတယ်။
+Code မပြင်ပါနဲ့။
+
+လုပ်ရန်:
+- git status စစ်ပါ
+- package.json diff summary
+- package-lock.json diff summary
+- newly added packages
+- uninstall vs git restore options
+- recommended safe rollback
+```
+
+## 24.5 localStorage data ကြောင့် test မရှင်းလင်းရင်
+
+Browser localStorage ထဲ data ကျန်နေနိုင်တယ်။
+
+Manual fix—
+
+```text
+Browser DevTools → Application → Local Storage → Clear
+```
+
+သို့မဟုတ် feature ထဲက clear history button သုံးပါ။
+
+Prompt—
+
+```text
+Manual testing မှာ localStorage data ကျန်နေနိုင်ပါတယ်။
+Testing before/after steps ကိုရှင်းပြပါ။
+Code မပြင်ပါနဲ့။
+```
+
+---
+
+# 25. Verification Checklist
+
+ဒီအခန်းကိုနားလည်ပြီလား စစ်ပါ။
+
+```text
+[ ] Level 4 Coding Agent ဆိုတာ feature-level agent ဖြစ်ကြောင်းရှင်းပြနိုင်တယ်
+[ ] Level 3 CLI Agent နဲ့ Level 4 Coding Agent ကွာခြားချက်သိတယ်
+[ ] Explore → Plan → Implement → Verify → Fix → Summarize loop ကိုနားလည်တယ်
+[ ] Feature Brief ရေးနိုင်တယ်
+[ ] Acceptance Criteria ရေးနိုင်တယ်
+[ ] Definition of Done သတ်မှတ်နိုင်တယ်
+[ ] Allowed files / Do-not-touch list ထည့်နိုင်တယ်
+[ ] Non-goals ထည့်နိုင်တယ်
+[ ] Plan approval gate ထည့်နိုင်တယ်
+[ ] Package install approval gate ထည့်နိုင်တယ်
+[ ] Verification output format သတ်မှတ်နိုင်တယ်
+[ ] Agent summary ကို Git diff နဲ့စစ်ရမယ်ဆိုတာသိတယ်
+[ ] Scope creep / over-engineering / silent behavior change risk ကိုသိတယ်
+[ ] Feature Done ဖြစ်ဖို့ acceptance criteria + verification လိုကြောင်းနားလည်တယ်
+```
+
+---
+
+# 26. Mini Assignment
+
+## Assignment 1 — Level 4 Definition ရေးပါ
+
+ကိုယ်ပိုင်စကားနဲ့ရေးပါ။
+
+```text
+Level 4: Coding Agent ဆိုတာ...
+```
+
+ပါရမယ့်အချက်—
+
+```text
+- feature-level task လုပ်နိုင်
+- plan → implement → verify loop လုပ်နိုင်
+- multiple related files ပြင်နိုင်
+- user approval/review လို
+- final Done ကို acceptance criteria နဲ့စစ်ရ
+```
+
+---
+
+## Assignment 2 — Feature Brief ရေးပါ
+
+Feature—
+
+```text
+Event List Filter
+```
+
+Goal—
+
+```text
+User က category အလိုက် event list ကို filter လုပ်နိုင်ရမယ်။
+```
+
+Feature Brief ထဲမှာပါရမယ့်အရာ—
+
+```text
+- Context
+- Goal
+- Scope
+- Non-goals
+- Acceptance Criteria
+- Allowed files
+- Do-not-touch list
+- Verification
+```
+
+---
+
+## Assignment 3 — Acceptance Criteria ရေးပါ
+
+Feature—
+
+```text
+Registration History
+```
+
+Acceptance criteria ၇ ခုရေးပါ။
+
+ဥပမာ—
+
+```text
+[ ] Valid submit creates attendee record
+[ ] Ticket code appears
+[ ] History persists after refresh
+```
+
+---
+
+## Assignment 4 — Plan Review လုပ်ပါ
+
+အောက်ပါ plan ကို review လုပ်ပါ။
+
+```text
+Plan:
+- Add attendee list to index.html
+- Add localStorage logic to app.js
+- Install uuid package for ticket code generation
+- Add backend API later
+- Update package.json
+```
+
+စစ်ရန်—
+
+```text
+[ ] Scope နဲ့ကိုက်လား
+[ ] Non-goals ချိုးဖောက်လား
+[ ] Package install လိုလား
+[ ] package.json ပြင်သင့်လား
+[ ] Approve / revise / reject?
+```
+
+Expected reasoning—
+
+```text
+uuid package install မလိုနိုင်
+backend API သည် non-goal
+package.json update မလို
+Plan ကို revise လုပ်သင့်
+```
+
+---
+
+## Assignment 5 — Done Criteria ရေးပါ
+
+Feature တစ်ခု Done ဖြစ်ဖို့ checklist ၁၀ ခုရေးပါ။
+
+ပါရမယ့် category—
+
+```text
+- Acceptance criteria
+- Verification
+- Git diff
+- Security
+- Documentation
+- Commit readiness
+```
+
+---
+
+## Assignment 6 — Level 4 Prompt ရေးပါ
+
+Task—
+
+```text
+playground/chapter-11-coding-agent app ထဲမှာ Registration History feature ထည့်ချင်တယ်။
+```
+
+Prompt ထဲမှာပါရမယ့်အချက်—
+
+```text
+- Role
+- Mode
+- Feature
+- Context
+- Goal
+- Scope
+- Non-goals
+- Allowed files
+- Do-not-touch list
+- Acceptance criteria
+- Workflow
+- Approval gates
+- Reporting format
+```
+
+---
+
+# 27. Chapter Summary
+
+ဒီအခန်းမှာ **Level 4 — Coding Agent** ကိုလေ့လာခဲ့တယ်။
+
+အရေးကြီးဆုံး mental model—
+
+```text
+Coding Agent = Feature-level task ကို plan → implement → verify → fix → summarize loop နဲ့လုပ်နိုင်တဲ့ AI assistant
+```
+
+Level 3 နဲ့ကွာခြားချက်—
+
+```text
+Level 3:
+CLI Agent က project-aware command assistant ဖြစ်ပြီး small fix/diagnosis အတွက်ကောင်းတယ်။
+
+Level 4:
+Coding Agent က feature တစ်ခုကို acceptance criteria အတိုင်း implement + verify လုပ်နိုင်တယ်။
+```
+
+Level 4 ကိုသုံးသင့်တဲ့နေရာ—
+
+```text
+Small/medium feature
+Multi-file frontend behavior
+localStorage persistence
+Form flow
+Tests/manual verification
+Refactor with behavior preservation
+```
+
+Level 4 မှာလိုအပ်တဲ့ inputs—
+
+```text
+Feature Brief
+Scope
+Non-goals
+Acceptance Criteria
+Allowed files
+Do-not-touch list
+Verification
+Approval gates
+```
+
+အန္တရာယ်များ—
+
+```text
+Scope creep
+Over-engineering
+Unnecessary dependency
+Silent behavior change
+Weak verification
+Security/privacy misses
+```
+
+အရေးကြီးဆုံး rule—
+
+```text
+Feature Brief မပါဘဲ Coding Agent ကို feature-level task မခိုင်းပါနဲ့။
+Plan မ approve ခင် code မပြင်ခိုင်းပါနဲ့။
+Done ဆိုတာ acceptance criteria + verification + git diff review ပြီးမှဖြစ်ပါတယ်။
+```
+
