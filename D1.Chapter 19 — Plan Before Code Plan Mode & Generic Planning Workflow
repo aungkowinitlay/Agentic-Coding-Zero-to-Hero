@@ -1,0 +1,1580 @@
+# Chapter 19 — Plan Before Code: Plan Mode & Generic Planning Workflow
+
+## 1. Learning Objectives
+
+ဒီအခန်းပြီးသွားရင် သင်က အောက်ပါအရာတွေကို နားလည်ပြီး လက်တွေ့အသုံးချနိုင်ရပါမယ်။
+
+```text
+[ ] Plan Before Code ဆိုတာဘာလဲ ရှင်းပြနိုင်မယ်
+[ ] “Code မရေးခင် plan” ဘာကြောင့်လိုလဲ နားလည်မယ်
+[ ] Claude Code Plan Mode ကို ဘယ်အချိန်သုံးရမလဲ သိမယ်
+[ ] Codex / generic agent တွေမှာ plan-only workflow ဘယ်လိုသုံးမလဲ သိမယ်
+[ ] Plan Mode နဲ့ prompt-only planning ကွာခြားချက်ကိုနားလည်မယ်
+[ ] Implementation plan ကောင်းတစ်ခုမှာ ပါရမယ့်အပိုင်းတွေကိုသိမယ်
+[ ] Plan ကို approve / revise / reject လုပ်နိုင်မယ်
+[ ] Plan review checklist သုံးနိုင်မယ်
+[ ] Agent ကို code မပြင်ခင် plan တင်ခိုင်းနိုင်မယ်
+[ ] Scope creep, over-engineering, missing verification, unsafe package install စတာတွေကို plan stage မှာဖမ်းနိုင်မယ်
+[ ] Plan approved ပြီးမှ implementation prompt ရေးနိုင်မယ်
+```
+
+ဒီအခန်းက Chapter 18 Prompt Anatomy ရဲ့ ဆက်တင်အခန်းပါ။ Prompt Anatomy က “Prompt တစ်ခုကို ဘယ်လိုဖွဲ့မလဲ” ကိုသင်ခဲ့တယ်။ ဒီအခန်းမှာတော့ prompt ထဲက အရေးကြီးဆုံး workflow rule ဖြစ်တဲ့—
+
+```text
+Plan Before Code
+```
+
+ကိုအသေးစိတ်သင်မယ်။
+
+---
+
+## 2. Beginner Explanation
+
+Agentic Coding မှာ beginner တွေရဲ့ အကြီးဆုံးအမှားတစ်ခုက—
+
+```text
+“လုပ်ပေး” လို့ပြောလိုက်တာနဲ့ Agent ကို code တန်းရေးခိုင်းခြင်း
+```
+
+ပါ။
+
+ဥပမာ—
+
+```text
+Registration History feature ထည့်ပေး။
+```
+
+လို့ခိုင်းလိုက်ရင် Agent က တန်းပြီး file တွေပြင်နိုင်တယ်။ ဒါပေမယ့် ပြင်ပြီးမှ သိလိုက်ရတာက—
+
+```text
+Backend API ထည့်သွားတယ်
+package အသစ် install လုပ်ချင်တယ်
+localStorage key မတူဘူး
+HTML structure အများကြီးပြောင်းသွားတယ်
+existing validation ပျက်သွားတယ်
+tests မစစ်ထားဘူး
+```
+
+ဖြစ်နိုင်တယ်။
+
+Plan Before Code ဆိုတာ—
+
+```text
+Agent ကို code မရေးခင်
+ဘာလုပ်မလဲ၊ ဘယ် file တွေပြင်မလဲ၊ ဘာ risk ရှိလဲ၊ ဘယ်လိုစစ်မလဲ
+အရင်ရှင်းပြခိုင်းခြင်း
+```
+
+ပါ။
+
+အိမ်ပြင်ဆင်မယ်ဆိုရင် ဆောက်လုပ်ရေးသမားကို “အိမ်ကောင်းအောင်လုပ်ပေး” လို့မပြောသင့်ဘူး။ အရင်ဆုံး—
+
+```text
+ဘယ်အခန်းပြင်မလဲ?
+ဘယ်နံရံမထိရဘူးလဲ?
+ဘယ်ပစ္စည်းသုံးမလဲ?
+ဘယ်လောက်အထိလုပ်မလဲ?
+ပြီးရင်ဘယ်လိုစစ်မလဲ?
+```
+
+ဆိုတဲ့ plan တောင်းရမယ်။
+
+Agentic Coding မှာလည်း အတူတူပါ။
+
+```text
+Code မရေးခင် plan တောင်းပါ။
+Plan ကိုဖတ်ပါ။
+Scope နဲ့ကိုက်လားစစ်ပါ။
+Risk ရှိလားစစ်ပါ။
+Verification ပါလားစစ်ပါ။
+အဆင်ပြေမှ approve လုပ်ပါ။
+```
+
+---
+
+# 3. Plan Mode ဆိုတာဘာလဲ
+
+Plan Mode ဆိုတာ Agent ကို **source code မပြင်ခိုင်းဘဲ analysis + planning လုပ်စေတဲ့ mode** ပါ။
+
+Claude Code Plan Mode မှာ Claude က files ဖတ်နိုင်၊ shell commands တွေနဲ့ explore လုပ်နိုင်၊ plan တင်ပြနိုင်ပေမယ့် source files ကိုမပြင်ဘူး။ Plan Mode ကို `Shift+Tab`, `/plan`, သို့မဟုတ် CLI ကနေ `claude --permission-mode plan` နဲ့ဝင်နိုင်ပြီး permission prompts တွေက default/manual mode လိုပဲသက်ရောက်နေဆဲဖြစ်ကြောင်း Claude Code docs ကဖော်ပြထားပါတယ်။ ([Claude][1])
+
+Codex CLI ဘက်မှာလည်း `/plan` slash command နဲ့ active conversation ကို plan mode ပြောင်းနိုင်ပြီး optional inline planning prompt ပေးနိုင်ကြောင်း official docs မှာဖော်ပြထားပါတယ်။ Codex docs မှာ read-only mode သည် consultative mode အဖြစ် files browse လုပ်နိုင်ပေမယ့် changes မလုပ်ဘဲ plan approve မတိုင်ခင် command/edit မလုပ်နိုင်ကြောင်းလည်းဖော်ပြထားပါတယ်။ ([OpenAI Developers][2])
+
+Beginner အတွက် အလွယ်ဆုံး mental model—
+
+```text
+Plan Mode = Agent ကို “အရင်ကြည့်၊ အရင်စဉ်းစား၊ အရင် plan တင်” ခိုင်းတဲ့ safe mode
+```
+
+---
+
+# 4. Plan Mode နဲ့ Prompt-only Planning ကွာခြားချက်
+
+Plan Mode မရှိတဲ့ tool တွေမှာလည်း planning prompt သုံးလို့ရတယ်။ ဒါပေမယ့် Plan Mode feature ပါတဲ့ tool မှာ mode-level protection ပိုရှိနိုင်တယ်။
+
+| အချက်                   | Prompt-only Planning            | Tool Plan Mode                           |
+| ----------------------- | ------------------------------- | ---------------------------------------- |
+| ဘယ်လိုလုပ်လဲ            | Prompt ထဲ “Code မပြင်ပါနဲ့” ရေး | Tool permission/mode အဖြစ် plan mode ဝင် |
+| Safety                  | Model instruction ပေါ်မူတည်     | Tool-level behavior ပိုထိန်းနိုင်        |
+| File edit               | Agent မလိုက်နာရင်ပြင်နိုင်      | Source files မပြင်ရန် mode ကကန့်သတ်      |
+| Use case                | Tool မရွေးသုံးနိုင်             | Claude Code / Codex လို supported tools  |
+| Beginner recommendation | အမြဲအသုံးဝင်                    | ရနိုင်ရင်ပိုကောင်း                       |
+
+သတိထားရန်—
+
+```text
+Plan Mode သုံးထားတာနဲ့ အရာရာအလိုလိုမှန်မသွားပါ။
+Plan ကို human က review လုပ်ရမယ်။
+```
+
+Plan Mode က file မပြင်အောင်ကူညီတယ်။ ဒါပေမယ့် plan ကိုယ်တိုင်မှားနိုင်တယ်။ Scope ကျော်နိုင်တယ်။ Package install မလိုဘဲထည့်ဖို့အကြံပြုနိုင်တယ်။ ဒါကြောင့် plan review checklist မဖြစ်မနေလိုတယ်။
+
+---
+
+# 5. Plan Before Code ဘာကြောင့်အရေးကြီးလဲ
+
+## 5.1 Scope creep ကိုအစောပိုင်းဖမ်းနိုင်တယ်
+
+Agent က simple frontend feature ကို backend/database feature အဖြစ်ချဲ့ချင်နိုင်တယ်။
+
+Plan stage မှာဖမ်းနိုင်တဲ့ example—
+
+```text
+User goal:
+localStorage history feature
+
+Agent plan:
+Add backend API and database table
+```
+
+Review result—
+
+```text
+Reject / revise.
+Backend/database သည် non-goal ဖြစ်သည်။
+```
+
+## 5.2 Wrong files မပြင်ခင်တားနိုင်တယ်
+
+Plan ထဲမှာ Agent ကပြင်မယ့် files တွေဖော်ပြတယ်။
+
+```text
+Files to change:
+- app.js
+- style.css
+- package.json
+```
+
+Package install မလိုတဲ့ task ဖြစ်ရင် `package.json` ပါလာတာကို plan stage မှာတားနိုင်တယ်။
+
+## 5.3 Risk ကိုကြိုမြင်နိုင်တယ်
+
+Plan ထဲမှာ risk section တောင်းထားရင်—
+
+```text
+Risk:
+localStorage ထဲ phone number သိမ်းခြင်းသည် privacy consideration ရှိနိုင်သည်။
+```
+
+လိုတွေ့နိုင်တယ်။
+
+## 5.4 Verification ကိုကြိုသတ်မှတ်နိုင်တယ်
+
+Agent က “ပြီးပြီ” လို့ပြောတာထက်—
+
+```text
+Manual tests:
+- empty name
+- empty phone
+- valid submit
+- refresh persistence
+- clear history
+```
+
+လို plan ထဲကတည်းက verification ပါရင် Done စစ်ရလွယ်တယ်။
+
+## 5.5 Beginner ကို code မထိခင်နားလည်စေတယ်
+
+Plan က beginner အတွက် learning artifact ဖြစ်တယ်။
+
+```text
+ဒီ feature မှာ HTML ဘာထည့်မလဲ
+CSS ဘာထည့်မလဲ
+JavaScript ဘာလုပ်မလဲ
+localStorage ဘယ်လိုသုံးမလဲ
+```
+
+ကို code မရေးခင်မြင်နိုင်တယ်။
+
+---
+
+# 6. ဘယ်အချိန် Plan First သုံးရမလဲ
+
+Plan first သုံးသင့်တဲ့အချိန်—
+
+```text
+[ ] File ၂ ဖိုင်ထက်ပိုပြင်နိုင်တဲ့ task
+[ ] Feature အသစ်ထည့်မယ်
+[ ] Bug root cause မသေချာ
+[ ] Package install ဖြစ်နိုင်
+[ ] Backend/database/auth/security ထိနိုင်
+[ ] Deployment/cloud action ပါနိုင်
+[ ] Existing codebase မသိသေး
+[ ] Requirement မရှင်း
+[ ] Tests/build run လို
+[ ] Agent က project structure မဖတ်ရသေး
+```
+
+Plan first မလိုနိုင်တဲ့အချိန်—
+
+```text
+[ ] Typo တစ်လုံးပြင်
+[ ] README line တစ်ကြောင်းပြင်
+[ ] Comment တစ်ခုထည့်
+[ ] Console message text တစ်ကြောင်းပြင်
+[ ] Already scoped one-line change
+```
+
+ဒါပေမယ့် beginner အတွက် အစပိုင်းမှာ task သေးတောင် plan တိုတိုတောင်းတာကောင်းတယ်။
+
+```text
+ဒီ change က one-line change ဖြစ်သင့်ပါတယ်။
+ဘာ line ပြင်မလဲပြောပြီးမှပြင်ပါ။
+```
+
+---
+
+# 7. Plan ကောင်းတစ်ခုမှာ ပါရမယ့်အရာ
+
+Implementation plan ကောင်းတစ်ခုမှာ အောက်ပါအပိုင်းတွေပါသင့်တယ်။
+
+```text
+1. Understanding
+2. Files to read
+3. Files to change
+4. Proposed changes
+5. Non-goals / out of scope
+6. Risks / assumptions
+7. Verification plan
+8. Rollback plan
+9. Approval request
+```
+
+## 7.1 Understanding
+
+Agent က task ကိုဘယ်လိုနားလည်ထားလဲပြရမယ်။
+
+```text
+Understanding:
+User wants to add registration history to a static frontend-only app using localStorage. No backend or package install.
+```
+
+## 7.2 Files to Read
+
+```text
+Files to read:
+- index.html
+- style.css
+- app.js
+```
+
+## 7.3 Files to Change
+
+```text
+Files to change:
+- index.html: add history list section
+- style.css: add history list styling
+- app.js: add localStorage and render logic
+```
+
+## 7.4 Proposed Changes
+
+```text
+Proposed changes:
+- Add attendee list container
+- Add clear history button
+- Add ticket code generator
+- Save attendees to localStorage
+- Render saved attendees on page load
+```
+
+## 7.5 Non-goals
+
+```text
+Non-goals:
+- No backend API
+- No database
+- No email/SMS notification
+- No package install
+```
+
+## 7.6 Risks / Assumptions
+
+```text
+Risks:
+- localStorage stores phone numbers in browser; privacy consideration.
+- If localStorage JSON is corrupted, app should recover safely.
+
+Assumptions:
+- This is a learning lab, not production.
+```
+
+## 7.7 Verification Plan
+
+```text
+Verification:
+- Empty name error
+- Empty phone error
+- Valid registration
+- Refresh persistence
+- Clear history
+- Browser console error check
+```
+
+## 7.8 Rollback Plan
+
+```text
+Rollback:
+- Use git diff to review changes
+- Use git restore playground/chapter-11-coding-agent/ if rejected
+```
+
+## 7.9 Approval Request
+
+```text
+Approval needed:
+Please approve this plan before I edit files.
+```
+
+---
+
+# 8. Plan Review Checklist
+
+Agent plan ရလာရင် အောက်ပါ checklist နဲ့စစ်ပါ။
+
+```text
+[ ] Agent နားလည်ထားတာမှန်လား
+[ ] Goal နဲ့ကိုက်လား
+[ ] Scope ထဲရှိလား
+[ ] Non-goals ချိုးဖောက်ထားလား
+[ ] Allowed files ထဲက files ပဲပြင်မလား
+[ ] Do-not-touch list ထဲက file မပါဘူးလား
+[ ] Package install ပါနေလား
+[ ] Secret/.env access ပါနေလား
+[ ] Backend/database/deployment မလိုဘဲပါနေလား
+[ ] Verification plan လုံလောက်လား
+[ ] Manual test cases ပါလား
+[ ] Risk/assumption ပါလား
+[ ] Rollback plan ပါလား
+[ ] Plan ကို beginner နားလည်နိုင်လား
+```
+
+Decision—
+
+```text
+Approve
+Revise
+Reject
+Ask clarification
+```
+
+---
+
+# 9. Approve / Revise / Reject
+
+## 9.1 Approve
+
+Plan ကောင်းရင်—
+
+```text
+Plan ကို approve လုပ်ပါတယ်။
+Allowed files ထဲမှာပဲ implement လုပ်ပါ။
+Package install မလုပ်ပါနဲ့။
+ပြီးရင် acceptance criteria check, verification result, git diff summary ပေးပါ။
+```
+
+## 9.2 Revise
+
+Plan က scope နည်းနည်းကျော်နေတယ်ဆိုရင်—
+
+```text
+Plan ကို revise လုပ်ပါ။
+Backend API ထည့်တာကိုဖယ်ပါ။
+ဒီ task သည် frontend-only localStorage feature ဖြစ်ပါတယ်။
+Code မပြင်သေးပါနဲ့။
+```
+
+## 9.3 Reject
+
+Plan က task ကိုမှားနားလည်ထားရင်—
+
+```text
+ဒီ plan ကို reject လုပ်ပါတယ်။
+Task ကိုမှားနားလည်ထားပါတယ်။
+
+မှန်သော goal:
+[goal]
+
+Non-goals:
+[non-goals]
+
+Code မပြင်သေးပါနဲ့။
+Plan အသစ်ပြန်ပေးပါ။
+```
+
+## 9.4 Ask Clarification
+
+Agent plan ထဲမှာ assumption အရေးကြီးတာရှိရင်—
+
+```text
+Implementation မစခင် clarify လုပ်ပါ။
+Ticket code format ကို EVT-YYYY-XXXX လုပ်မလား, Date.now() သုံးမလား options ပေးပါ။
+Code မပြင်သေးပါနဲ့။
+```
+
+---
+
+# 10. Plan Approval Prompt Template
+
+Plan ကို approve လုပ်တဲ့ prompt ကလည်း structured ဖြစ်ရမယ်။
+
+```text
+Plan ကို approve လုပ်ပါတယ်။
+
+Implementation rules:
+- Allowed files ထဲမှာပဲပြင်ပါ
+- Package install မလုပ်ပါနဲ့
+- Non-goals မထည့်ပါနဲ့
+- Existing behavior မလိုအပ်ဘဲမပြောင်းပါနဲ့
+- Secret files မဖတ်ပါနဲ့
+
+After implementation:
+- Changed files summary
+- Acceptance criteria check table
+- Verification performed
+- Manual test steps
+- Known risks
+- Suggested commit message
+```
+
+ဒီ prompt က Agent ကို plan approved ဖြစ်သော်လည်း boundaries မပျောက်အောင်ပြန်ထိန်းပေးတယ်။
+
+---
+
+# 11. Plan-first Prompt Template
+
+Feature task အတွက် အောက်ပါ template ကိုသုံးပါ။
+
+```text
+Role:
+သင်က careful coding agent ဖြစ်တယ်။
+
+Mode:
+Plan first. Code မပြင်သေးပါနဲ့။
+
+Context:
+[project context]
+
+Goal:
+[desired outcome]
+
+Scope:
+[what to do]
+
+Non-goals:
+[what not to do]
+
+Allowed files/folders:
+- [paths]
+
+Do not touch:
+- .env
+- package.json, unless approved
+- node_modules/**
+- dist/**
+- [other paths]
+
+Constraints:
+[technical/safety rules]
+
+Acceptance Criteria:
+- [criteria 1]
+- [criteria 2]
+
+Plan Output Format:
+## Understanding
+## Files to Read
+## Files to Change
+## Proposed Changes
+## Non-goals Check
+## Risks and Assumptions
+## Verification Plan
+## Rollback Plan
+## Approval Needed
+
+Do not edit before approval.
+```
+
+---
+
+# 12. Generic Planning Workflow
+
+Tool-specific Plan Mode မရှိလည်း generic workflow သုံးနိုင်တယ်။
+
+```text
+1. Read-only prompt
+2. Agent explains current state
+3. Agent proposes plan
+4. Human reviews
+5. Human approves
+6. Agent implements
+7. Agent verifies
+8. Human reviews diff
+9. Commit
+```
+
+Diagram—
+
+```text
+Prompt
+  ↓
+Read-only exploration
+  ↓
+Implementation plan
+  ↓
+Human review
+  ↓
+Approval
+  ↓
+Code edit
+  ↓
+Verification
+  ↓
+Diff review
+  ↓
+Commit
+```
+
+Generic workflow prompt—
+
+```text
+Code မပြင်သေးပါနဲ့။
+Plan-only workflow လုပ်ပါ။
+
+Task:
+[task]
+
+လုပ်ရန်:
+1. Relevant files ဖတ်ပါ
+2. Current behavior ကိုရှင်းပါ
+3. Implementation plan ပေးပါ
+4. Risks/assumptions ပေးပါ
+5. Verification plan ပေးပါ
+6. Approval တောင်းပါ
+
+Approval မရသေးဘဲ edit, package install, command run မလုပ်ပါနဲ့။
+```
+
+---
+
+# 13. Claude Code Plan Mode Workflow
+
+Claude Code မှာ Plan Mode သုံးမယ်ဆိုရင်—
+
+```bash
+claude --permission-mode plan
+```
+
+သို့မဟုတ် session ထဲမှာ—
+
+```text
+/plan [your planning request]
+```
+
+သို့မဟုတ် `Shift+Tab` နဲ့ plan mode ဝင်နိုင်တယ်။ Claude Code docs မှာ Plan Mode သည် source files မပြင်ဘဲ files read/search, exploration commands run, plan presentation လုပ်နိုင်ကြောင်း, plan approve မလုပ်ဘဲ `Shift+Tab` ထပ်နှိပ်၍ plan mode ထွက်နိုင်ကြောင်းဖော်ပြထားပါတယ်။ ([Claude][1])
+
+Claude Plan Mode prompt example—
+
+```text
+/plan Registration History feature ထည့်ချင်ပါတယ်။
+
+Context:
+Static HTML/CSS/JS lab app.
+
+Goal:
+Valid registration submit လုပ်ရင် attendee history list ထဲ record ထည့်ပြီး localStorage ထဲသိမ်းချင်ပါတယ်။
+
+Non-goals:
+No backend, no database, no package install.
+
+Allowed files:
+- playground/chapter-11-coding-agent/index.html
+- playground/chapter-11-coding-agent/style.css
+- playground/chapter-11-coding-agent/app.js
+
+Plan output:
+Understanding, files to change, proposed changes, risks, verification, approval needed.
+```
+
+---
+
+# 14. Codex Plan Workflow
+
+Codex CLI မှာ `/plan` slash command ကိုသုံးနိုင်တယ်။ Official Codex slash command docs မှာ `/plan` ရိုက်ပြီး Enter နှိပ်လျှင် active conversation ကို plan mode ပြောင်းနိုင်ပြီး inline prompt လည်းပေးနိုင်ကြောင်းဖော်ပြထားပါတယ်။ Task တစ်ခု run နေချိန်မှာ `/plan` temporarily unavailable ဖြစ်နိုင်ကြောင်းလည်း docs မှာဖော်ပြထားပါတယ်။ ([OpenAI Developers][2])
+
+Codex prompt example—
+
+```text
+/plan Propose an implementation plan for Registration History.
+
+Context:
+Static HTML/CSS/JS lab app.
+
+Scope:
+Frontend only.
+
+Non-goals:
+No backend, no database, no package install.
+
+Output:
+Files to inspect, files to change, proposed steps, risks, verification, approval request.
+```
+
+Codex docs မှာ read-only mode သည် files browse လုပ်နိုင်ပေမယ့် changes မလုပ်ဘဲ plan approve မတိုင်ခင် edits/commands မလုပ်နိုင်တဲ့ consultative mode အဖြစ်ဖော်ပြထားတာကြောင့် planning-only workflow အတွက်အသုံးဝင်ပါတယ်။ ([OpenAI Developers][3])
+
+---
+
+# 15. Plan ကို SPEC / Acceptance Criteria နဲ့စစ်နည်း
+
+Plan ကောင်း/မကောင်းကို SPEC နဲ့ချိတ်စစ်ရမယ်။
+
+ဥပမာ SPEC criteria—
+
+```text
+[ ] Valid submit creates attendee record
+[ ] Ticket code appears
+[ ] History persists after refresh
+[ ] Clear history works
+```
+
+Plan ထဲမှာ—
+
+```text
+Add attendee list
+Generate ticket code
+Save/load from localStorage
+Add clear button
+```
+
+ပါရမယ်။
+
+Plan criteria mapping table—
+
+```md
+| Acceptance Criteria | Plan Covers It? | Plan Step |
+|---|---|---|
+| Valid submit creates attendee record | Yes | app.js submit handler update |
+| Ticket code appears | Yes | generateTicketCode() |
+| History persists after refresh | Yes | load/save localStorage |
+| Clear history works | Yes | clear button handler |
+```
+
+Plan ထဲမှာ criteria တစ်ခုမပါရင် implementation မစခင် revise ခိုင်းပါ။
+
+Prompt—
+
+```text
+ဒီ plan ကို acceptance criteria နဲ့ map လုပ်ပါ။
+Criteria တစ်ခုချင်းစီကို plan step တစ်ခုနဲ့ချိတ်ပါ။
+Coverage မရှိတဲ့ criteria ရှိရင် plan ကို revise လုပ်ပါ။
+Code မပြင်ပါနဲ့။
+```
+
+---
+
+# 16. Plan ထဲမှာ Risk Section မဖြစ်မနေပါစေ
+
+Feature plan ထဲမှာ risk မပါရင် Agent က happy path ပဲစဉ်းစားနိုင်တယ်။
+
+Risk section examples—
+
+```text
+Risk:
+localStorage ထဲ phone number သိမ်းတာက privacy concern ဖြစ်နိုင်တယ်။
+
+Risk:
+Ticket code ကို Date.now() နဲ့ generate လုပ်တာက real production uniqueness guarantee မဟုတ်နိုင်ဘူး။
+
+Risk:
+HTML id/class ပြောင်းရင် existing JavaScript selector ပျက်နိုင်တယ်။
+
+Risk:
+No automated tests exist, so verification is manual.
+```
+
+Risk ကိုရေးထားတာက plan မကောင်းလို့မဟုတ်ပါ။ Risk သိခြင်းက professional workflow ပါ။
+
+---
+
+# 17. Plan ထဲမှာ Non-goals Check ထည့်ပါ
+
+Agent ကို “Non-goals check” section ပေးခိုင်းပါ။
+
+```text
+## Non-goals Check
+- Backend API: not included
+- Database: not included
+- Package install: not included
+- Email/SMS notification: not included
+- Deployment: not included
+```
+
+ဒီ section က scope creep ကိုအစောပိုင်းဖမ်းတယ်။
+
+---
+
+# 18. Plan ထဲမှာ Verification Plan ထည့်ပါ
+
+Verification plan မပါဘဲ implementation plan မပြည့်စုံပါ။
+
+Good verification plan—
+
+```text
+Manual tests:
+1. Submit empty form → name error
+2. Submit name only → phone error
+3. Submit valid form → attendee appears
+4. Refresh page → attendee remains
+5. Clear history → list clears and remains empty after refresh
+
+Static checks:
+- Browser console has no errors
+- git diff shows only allowed files changed
+```
+
+If npm scripts exist—
+
+```text
+Commands:
+- npm run build
+- npm test
+```
+
+---
+
+# 19. Plan ထဲမှာ Rollback Plan ထည့်ပါ
+
+Agent plan မှာ rollback plan ပါရင် human က ပိုယုံကြည်နိုင်တယ်။
+
+```text
+Rollback Plan:
+- Review git diff after implementation
+- If rejected, run:
+  git restore playground/chapter-11-coding-agent/index.html
+  git restore playground/chapter-11-coding-agent/style.css
+  git restore playground/chapter-11-coding-agent/app.js
+```
+
+သတိ—
+
+```text
+Rollback command မ run ခင် approval တောင်းရမယ်။
+```
+
+---
+
+# 20. Plan Smells — Plan မကောင်းကြောင်းပြတဲ့လက္ခဏာများ
+
+Plan ထဲမှာ အောက်ပါအရာတွေပါရင် သတိထားပါ။
+
+```text
+[ ] “Rewrite the app” လို broad statement
+[ ] package install မလိုဘဲ package install ထည့်ထား
+[ ] backend/database non-goal ဖြစ်သော်လည်းထည့်ထား
+[ ] allowed files ထက်ကျော်ထား
+[ ] verification plan မပါ
+[ ] risks မပါ
+[ ] acceptance criteria တစ်ခုချင်းစီမကိုက်
+[ ] secret/.env ဖတ်ဖို့လိုတယ်လို့ပြော
+[ ] “should work” လို vague verification
+[ ] rollback plan မပါ
+```
+
+Plan smell တွေ့ရင် implementation မ approve လုပ်ပါနဲ့။
+
+---
+
+# 21. Step-by-step Lab
+
+ဒီ lab မှာ Agent ကို code မပြင်ခိုင်းဘဲ plan-only workflow လေ့ကျင့်မယ်။
+
+## Lab Goal
+
+```text
+Feature task တစ်ခုအတွက် plan-first prompt ရေးပြီး
+Agent plan ကို review / revise / approve လုပ်နိုင်မယ်။
+```
+
+## Feature
+
+```text
+Registration History feature
+```
+
+## Target folder
+
+```text
+playground/chapter-11-coding-agent/
+```
+
+---
+
+## Step 1 — Lab note ဆောက်ပါ
+
+```bash
+cd ~/Desktop/agentic-zero-to-hero
+touch labs/chapter-19-plan-before-code.md
+```
+
+Windows PowerShell—
+
+```powershell
+cd ~/Desktop/agentic-zero-to-hero
+New-Item labs/chapter-19-plan-before-code.md
+```
+
+---
+
+## Step 2 — Plan-first Prompt ရေးပါ
+
+`labs/chapter-19-plan-before-code.md` ထဲမှာ—
+
+```md
+# Chapter 19 Lab — Plan Before Code
+
+## Task
+
+Registration History feature ကို plan-first workflow နဲ့လုပ်မယ်။
+
+## Plan-first Prompt
+
+[paste prompt here]
+```
+
+Prompt—
+
+```text
+Role:
+သင်က careful Level 4 Coding Agent ဖြစ်တယ်။
+
+Mode:
+Plan first. Code မပြင်သေးပါနဲ့။
+
+Context:
+ဒီ app က static HTML/CSS/JavaScript lab app ဖြစ်ပါတယ်။
+Backend API မရှိပါ။
+
+Goal:
+Valid registration submit လုပ်ရင် attendee history list ထဲ record ထည့်ချင်ပါတယ်။
+Ticket code generate လုပ်ပြီး localStorage ထဲသိမ်းချင်ပါတယ်။
+
+Scope:
+- Frontend only
+- Existing files ပဲပြင်ပါ
+- localStorage သုံးပါ
+
+Non-goals:
+- Backend API မထည့်ပါ
+- Database မထည့်ပါ
+- Package install မလုပ်ပါ
+- Email/SMS/Viber notification မထည့်ပါ
+- Deployment မလုပ်ပါ
+
+Allowed files:
+- playground/chapter-11-coding-agent/index.html
+- playground/chapter-11-coding-agent/style.css
+- playground/chapter-11-coding-agent/app.js
+
+Do not touch:
+- package.json
+- package-lock.json
+- .env
+- node_modules/**
+- projects/event-management/**
+- deployment files
+
+Acceptance Criteria:
+- Empty name shows “နာမည်ဖြည့်ပါ။”
+- Empty phone shows “ဖုန်းနံပါတ်ဖြည့်ပါ။”
+- Valid submit generates a ticket code
+- Attendee appears in visible history list
+- History remains after browser refresh
+- Clear history button clears list and localStorage
+- Browser console has no errors
+- Only allowed files changed
+
+Plan Output Format:
+## Understanding
+## Files to Read
+## Files to Change
+## Proposed Changes
+## Non-goals Check
+## Risks and Assumptions
+## Acceptance Criteria Coverage
+## Verification Plan
+## Rollback Plan
+## Approval Needed
+
+Do not edit before approval.
+```
+
+---
+
+## Step 3 — Agent ကို plan တောင်းပါ
+
+Claude/Codex/Generic agent ထဲမှာ prompt ကိုပေးပါ။ Plan Mode ရှိတဲ့ tool သုံးရင် `/plan` သို့မဟုတ် Plan Mode နဲ့သုံးပါ။
+
+---
+
+## Step 4 — Plan Review Table ရေးပါ
+
+Lab note ထဲမှာ—
+
+```md
+## Plan Review
+
+| Check | Status | Notes |
+|---|---|---|
+| Goal understood | PASS/FAIL | |
+| Scope respected | PASS/FAIL | |
+| Non-goals respected | PASS/FAIL | |
+| Allowed files only | PASS/FAIL | |
+| No package install | PASS/FAIL | |
+| Verification included | PASS/FAIL | |
+| Risks included | PASS/FAIL | |
+| Rollback included | PASS/FAIL | |
+| Acceptance criteria mapped | PASS/FAIL | |
+```
+
+---
+
+## Step 5 — Revise Prompt ရေးပါ
+
+Plan ထဲမှာ issue ရှိတယ်ဆိုပါစို့။
+
+ဥပမာ package install ပါလာတယ်။
+
+```text
+Plan ကို revise လုပ်ပါ။
+Package install သည် non-goal ဖြစ်ပါတယ်။
+Ticket code generation ကို plain JavaScript နဲ့လုပ်ပါ။
+Code မပြင်သေးပါနဲ့။
+Updated plan ကိုပဲပေးပါ။
+```
+
+Lab note ထဲမှာ—
+
+```md
+## Revision Prompt
+
+[paste revision prompt]
+```
+
+ရေးပါ။
+
+---
+
+## Step 6 — Approval Prompt ရေးပါ
+
+Plan approve ဖြစ်တဲ့အခါပေးမယ့် prompt ကိုရေးပါ။ ဒီ lab မှာ implement မလုပ်သေးပါ။
+
+```text
+Plan ကို approve လုပ်ပါတယ်။
+
+Implementation rules:
+- Allowed files ထဲမှာပဲပြင်ပါ
+- Package install မလုပ်ပါနဲ့
+- Non-goals မထည့်ပါနဲ့
+- Existing validation behavior မပျက်စေပါနဲ့
+- Secret files မဖတ်ပါနဲ့
+
+After implementation:
+- Changed files summary
+- Acceptance criteria check table
+- Manual verification steps
+- git diff summary
+- Known risks
+- Suggested commit message
+
+ဒီ lab မှာတော့ implementation မလုပ်သေးပါ။
+Approval prompt draft အနေနဲ့သာရေးထားပါ။
+```
+
+Lab note ထဲမှာ—
+
+```md
+## Approval Prompt Draft
+
+[paste approval prompt]
+```
+
+---
+
+## Step 7 — Git commit
+
+```bash
+git status
+git diff labs/chapter-19-plan-before-code.md
+git add labs/chapter-19-plan-before-code.md
+git commit -m "add plan before code lab"
+```
+
+---
+
+# 22. Expected Output
+
+ဒီအခန်းပြီးရင် `labs/chapter-19-plan-before-code.md` ထဲမှာ—
+
+```text
+Task
+Plan-first prompt
+Agent plan summary
+Plan review table
+Revision prompt, if needed
+Approval prompt draft
+Lessons learned
+```
+
+ပါရမယ်။
+
+Example lesson—
+
+```md
+## Lesson
+
+Plan Before Code သည် Agent ကို code မထိခင် scope, files, risks, verification, rollback ကိုရှင်းပြခိုင်းသော workflow ဖြစ်သည်။ Plan ကို approve မလုပ်ခင် acceptance criteria နဲ့ map လုပ်ရမယ်။
+```
+
+---
+
+# 23. Copy-paste Prompts
+
+## 23.1 Generic Plan-first Prompt
+
+```text
+Mode:
+Plan first. Code မပြင်သေးပါနဲ့။
+
+Task:
+[task]
+
+Context:
+[context]
+
+Scope:
+[scope]
+
+Non-goals:
+[non-goals]
+
+Allowed files:
+[files]
+
+Do not touch:
+[blocked files]
+
+Acceptance Criteria:
+[criteria]
+
+Plan Output:
+## Understanding
+## Files to Read
+## Files to Change
+## Proposed Changes
+## Non-goals Check
+## Risks and Assumptions
+## Acceptance Criteria Coverage
+## Verification Plan
+## Rollback Plan
+## Approval Needed
+
+Do not edit before approval.
+```
+
+## 23.2 Plan Review Prompt
+
+```text
+အောက်ပါ implementation plan ကို review လုပ်ပါ။
+Code မပြင်ပါနဲ့။
+
+စစ်ရန်:
+- Goal နားလည်ထားတာမှန်လား
+- Scope ထဲရှိလား
+- Non-goals ချိုးဖောက်ထားလား
+- Allowed files ထဲက files ပဲပြင်မလား
+- Package install ပါနေလား
+- Secret/.env access ပါနေလား
+- Acceptance criteria အားလုံး cover ဖြစ်လား
+- Verification plan လုံလောက်လား
+- Rollback plan ပါလား
+- Risks/assumptions ပါလား
+
+Output:
+Approve / Revise / Reject recommendation ပေးပါ။
+
+Plan:
+[paste plan]
+```
+
+## 23.3 Plan Revision Prompt
+
+```text
+Plan ကို revise လုပ်ပါ။
+Code မပြင်သေးပါနဲ့။
+
+Problems:
+[paste problems]
+
+Correction:
+[paste correction]
+
+Updated plan ကိုပဲပေးပါ။
+Implementation မလုပ်ပါနဲ့။
+```
+
+## 23.4 Acceptance Criteria Mapping Prompt
+
+```text
+ဒီ plan ကို acceptance criteria နဲ့ map လုပ်ပါ။
+Code မပြင်ပါနဲ့။
+
+Acceptance Criteria:
+[paste criteria]
+
+Plan:
+[paste plan]
+
+Output:
+| Criteria | Covered? | Plan Step | Gap |
+```
+
+## 23.5 Approval Prompt
+
+```text
+Plan ကို approve လုပ်ပါတယ်။
+
+Implementation rules:
+- Allowed files/folders ထဲမှာပဲပြင်ပါ
+- Package install မလုပ်ပါနဲ့
+- Non-goals မထည့်ပါနဲ့
+- Existing behavior မလိုအပ်ဘဲမပြောင်းပါနဲ့
+- Secret files မဖတ်ပါနဲ့
+
+After implementation:
+- Changed files summary
+- Acceptance criteria check table
+- Verification performed
+- Manual test steps
+- Known risks
+- Git diff summary
+- Suggested commit message
+```
+
+## 23.6 Plan Smell Detector Prompt
+
+```text
+ဒီ plan ထဲမှာ plan smells ရှိလားစစ်ပါ။
+
+စစ်ရန်:
+- rewrite too broad
+- scope creep
+- package install unnecessary
+- backend/database non-goal violation
+- missing verification
+- missing rollback
+- missing risks
+- allowed files exceeded
+- secret access risk
+- vague “should work” verification
+
+Plan:
+[paste plan]
+```
+
+---
+
+# 24. Common Errors
+
+## Error 1 — Plan Mode သုံးပြီး plan မဖတ်ဘဲ approve လုပ်ခြင်း
+
+Plan Mode သုံးတာက plan ကို review လုပ်ဖို့ပါ။ Plan မဖတ်ဘဲ approve လုပ်ရင် အကျိုးမရှိပါ။
+
+ပြင်နည်း—
+
+```text
+Plan Review Checklist သုံးပါ။
+```
+
+---
+
+## Error 2 — Plan ထဲ Verification မပါခြင်း
+
+မကောင်း—
+
+```text
+Implement feature and it should work.
+```
+
+ကောင်း—
+
+```text
+Manual tests:
+empty name, empty phone, valid submit, refresh persistence, clear history.
+```
+
+---
+
+## Error 3 — Plan ထဲ Non-goals မစစ်ခြင်း
+
+Non-goals section မပါရင် scope creep ဖြစ်နိုင်တယ်။
+
+ပြင်နည်း—
+
+```text
+Non-goals Check section မဖြစ်မနေတောင်းပါ။
+```
+
+---
+
+## Error 4 — Allowed files မပါခြင်း
+
+Agent က file အများကြီးပြင်နိုင်တယ်။
+
+ပြင်နည်း—
+
+```text
+Files to Change section နဲ့ Allowed files ကိုတိုက်စစ်ပါ။
+```
+
+---
+
+## Error 5 — Plan မှာ package install ပါလာတာကိုသတိမထားခြင်း
+
+Package install က dependencies/security risk ပါလာတယ်။
+
+ပြင်နည်း—
+
+```text
+No package install unless explicitly approved.
+```
+
+---
+
+## Error 6 — Plan approval prompt မှာ rules ပြန်မထည့်ခြင်း
+
+Plan approve လုပ်တဲ့အချိန်မှာ boundaries ကိုပြန်ရေးပါ။ Agent က implementation stage မှာ rules မလွတ်အောင်။
+
+---
+
+## Error 7 — Plan ကို too detailed code generation ဖြစ်အောင်တောင်းခြင်း
+
+Plan stage မှာ code အပြည့်မလိုပါ။ Plan, files, risks, verification လိုတာပါ။
+
+ပြင်နည်း—
+
+```text
+Do not write code in the plan.
+Implementation steps only.
+```
+
+---
+
+# 25. Debug / Recovery
+
+## 25.1 Agent က plan မပေးဘဲ code ပြင်သွားရင်
+
+Prompt—
+
+```text
+Stop. Plan-first instruction မလိုက်နာခဲ့ပါ။
+Code မပြင်သေးပါနဲ့။
+
+လုပ်ရန်:
+1. git status စစ်ပါ
+2. changed files list ပေးပါ
+3. ဘာ changes လုပ်ခဲ့လဲ summary ပေးပါ
+4. changes ကို keep/rollback options ပေးပါ
+5. plan-first workflow နဲ့ပြန်စပါ
+```
+
+## 25.2 Plan က scope ကျော်နေရင်
+
+Prompt—
+
+```text
+ဒီ plan က scope ကျော်နေပါတယ်။
+Code မပြင်ပါနဲ့။
+
+Scope:
+[paste scope]
+
+Non-goals:
+[paste non-goals]
+
+Scope violation:
+[paste violation]
+
+Plan ကို scope အတွင်းပြန်ရေးပါ။
+```
+
+## 25.3 Plan က vague ဖြစ်နေရင်
+
+Prompt—
+
+```text
+Plan က vague ဖြစ်နေပါတယ်။
+Code မပြင်ပါနဲ့။
+
+ပိုတိကျအောင်ပြန်ရေးပါ:
+- exact files to change
+- exact behavior changes
+- acceptance criteria mapping
+- verification steps
+- risks
+- rollback plan
+```
+
+## 25.4 Plan က over-engineered ဖြစ်နေရင်
+
+Prompt—
+
+```text
+ဒီ plan က over-engineered ဖြစ်နေပါတယ်။
+Beginner lab အတွက် minimal implementation plan ပြန်ရေးပါ။
+
+Remove:
+- package install
+- backend/database
+- unnecessary abstraction
+- complex architecture
+
+Keep:
+- simple HTML/CSS/JS
+- localStorage
+- manual tests
+```
+
+## 25.5 Plan က conflict ဖြစ်နေရင်
+
+Prompt—
+
+```text
+Plan ထဲမှာ contradiction ရှိနိုင်ပါတယ်။
+Code မပြင်ပါနဲ့။
+
+လုပ်ရန်:
+- conflicting statements list
+- which one should follow COURSE_DECISIONS.md / SPEC?
+- revised consistent plan
+- human decision needed
+```
+
+---
+
+# 26. Verification Checklist
+
+ဒီအခန်းကိုနားလည်ပြီလား စစ်ပါ။
+
+```text
+[ ] Plan Before Code ဆိုတာဘာလဲရှင်းပြနိုင်တယ်
+[ ] Plan Mode နဲ့ prompt-only planning ကွာခြားချက်သိတယ်
+[ ] Claude Code Plan Mode ဝင်နည်းကိုသိတယ်
+[ ] Codex /plan concept ကိုသိတယ်
+[ ] ဘယ်အချိန် plan first သုံးရမလဲသိတယ်
+[ ] ဘယ်အချိန် plan မလိုနိုင်လဲသိတယ်
+[ ] Implementation plan ကောင်းတစ်ခုမှာပါရမယ့်အပိုင်းတွေသိတယ်
+[ ] Understanding / Files / Changes / Risks / Verification / Rollback ကိုခွဲနိုင်တယ်
+[ ] Plan review checklist သုံးနိုင်တယ်
+[ ] Approve / Revise / Reject decision ချနိုင်တယ်
+[ ] Acceptance criteria mapping လုပ်နိုင်တယ်
+[ ] Plan smell တွေကိုဖမ်းနိုင်တယ်
+[ ] Plan approval prompt ရေးနိုင်တယ်
+[ ] Agent က plan မပေးဘဲ code ပြင်သွားရင် recovery prompt သုံးနိုင်တယ်
+```
+
+---
+
+# 27. Mini Assignment
+
+## Assignment 1 — Plan Before Code Definition ရေးပါ
+
+ကိုယ်ပိုင်စကားနဲ့ရေးပါ။
+
+```text
+Plan Before Code ဆိုတာ...
+```
+
+ပါရမယ့်အချက်—
+
+```text
+- code မရေးခင် plan တောင်းခြင်း
+- files/risk/verification ကြိုမြင်ခြင်း
+- human approval gate
+```
+
+---
+
+## Assignment 2 — Plan-first Prompt ရေးပါ
+
+Feature—
+
+```text
+Event list filter by category
+```
+
+Prompt ထဲမှာပါရမယ့်အရာ—
+
+```text
+- Mode: Plan first, no edits
+- Context
+- Goal
+- Scope
+- Non-goals
+- Allowed files
+- Acceptance criteria
+- Plan output format
+- Approval needed
+```
+
+---
+
+## Assignment 3 — Plan Review လုပ်ပါ
+
+အောက်ပါ plan ကို review လုပ်ပါ။
+
+```text
+Plan:
+- Install lodash for filtering.
+- Add backend API for categories.
+- Add category filter dropdown to index.html.
+- Update app.js to filter events.
+- Add database table for categories.
+- Test manually.
+```
+
+စစ်ရန်—
+
+```text
+[ ] Scope creep ရှိလား
+[ ] Package install လိုလား
+[ ] Backend/database non-goal ဖြစ်နိုင်လား
+[ ] Verification လုံလောက်လား
+[ ] Revise prompt ရေးပါ
+```
+
+Expected idea—
+
+```text
+Frontend-only filter feature ဖြစ်လျှင် lodash/backend/database မလို။
+Manual tests ပိုတိကျဖို့လို။
+```
+
+---
+
+## Assignment 4 — Acceptance Criteria Mapping Table ရေးပါ
+
+Criteria—
+
+```text
+[ ] Category dropdown appears
+[ ] Selecting category filters event cards
+[ ] “All” shows all events
+[ ] Empty result shows empty state
+```
+
+Plan steps နဲ့ map လုပ်ပါ။
+
+---
+
+## Assignment 5 — Approval Prompt ရေးပါ
+
+Plan approve ပြီး Agent ကို implementation ခိုင်းမယ့် prompt ရေးပါ။
+
+ပါရမယ့်အချက်—
+
+```text
+- Plan approved
+- allowed files only
+- no package install
+- no backend/database
+- after implementation summary
+- verification
+- git diff summary
+```
+
+---
+
+## Assignment 6 — Plan Smells List ရေးပါ
+
+Plan မကောင်းကြောင်းပြတဲ့ smell ၁၀ ခုရေးပါ။
+
+ဥပမာ—
+
+```text
+package install မလိုဘဲပါလာ
+verification မပါ
+allowed files မဖော်ပြ
+```
+
+---
+
+# 28. Chapter Summary
+
+ဒီအခန်းမှာ **Plan Before Code: Plan Mode & Generic Planning Workflow** ကိုလေ့လာခဲ့တယ်။
+
+အရေးကြီးဆုံး mental model—
+
+```text
+Plan Before Code = Agent ကို code မထိခင် စဉ်းစား၊ scope ချ၊ risk ဖော်ပြ၊ verification သတ်မှတ်ခိုင်းခြင်း
+```
+
+Tool-specific features—
+
+```text
+Claude Code:
+Plan Mode သည် source files မပြင်ဘဲ files ဖတ်/explore/plan တင်စေသည်။
+
+Codex:
+`/plan` command သို့မဟုတ် read-only planning workflow သုံးနိုင်သည်။
+```
+
+Plan ကောင်းတစ်ခုမှာပါသင့်တာ—
+
+```text
+Understanding
+Files to Read
+Files to Change
+Proposed Changes
+Non-goals Check
+Risks and Assumptions
+Acceptance Criteria Coverage
+Verification Plan
+Rollback Plan
+Approval Needed
+```
+
+အရေးကြီးဆုံး rule—
+
+```text
+Plan မဖတ်ဘဲ approve မလုပ်ပါနဲ့။
+Plan approve မလုပ်ခင် Agent ကို code မပြင်ခိုင်းပါနဲ့။
+```
+
+Agentic Coding အတွက် takeaway—
+
+```text
+Code မြန်မြန်ရေးတာက productivity မဟုတ်ပါ။
+မှန်တဲ့ code ကို မှန်တဲ့ scope နဲ့ verify လုပ်နိုင်အောင် ရေးတာက productivity ဖြစ်ပါတယ်။
+Plan Before Code က အဲဒီအတွက် ပထမဆုံး guardrail ဖြစ်ပါတယ်။
+```
+
